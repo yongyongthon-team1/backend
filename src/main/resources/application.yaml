@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: uniro-backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3307/uniro_db
+    username: uniro
+    password: ${MYSQL_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
