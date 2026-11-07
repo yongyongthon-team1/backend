@@ -14,3 +14,21 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000
+
+aws:
+  s3:
+    region: ${AWS_REGION:ap-southeast-2}
+    bucket: ${AWS_S3_BUCKET}
+
+verification:
+  enrollment:
+    allowed-university-ids: ${ENROLLMENT_UNIVERSITY_IDS}
