@@ -57,6 +57,22 @@ public class CourseController {
         return response(HttpStatus.OK, "S200", "수정 완료", data);
     }
 
+    // 코스 확정 (쿠폰 발급 포함)
+    @Operation(
+            summary = "코스 확정",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @PostMapping("/tours/{tourId}/course/confirm")
+    public ResponseEntity<Map<String, Object>> confirm(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @PathVariable Long tourId
+    ) {
+        var data = courseService.confirm(authenticator.requireUniversity(authorization), tourId);
+
+        return response(HttpStatus.OK, "S200", "코스 확정 완료", data);
+    }
+
     private ResponseEntity<Map<String, Object>> response(
             HttpStatus status, String code, String message, Object data
     ) {

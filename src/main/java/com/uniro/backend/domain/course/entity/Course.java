@@ -71,6 +71,15 @@ public class Course implements Persistable<Long> {
         this.isNew = false;
     }
 
+    // 확정한다. 한 번 확정하면 되돌릴 수 없다.
+    public void confirm() {
+        LocalDateTime now = Kst.now().truncatedTo(ChronoUnit.SECONDS);
+
+        this.status = CourseStatus.CONFIRMED;
+        this.confirmedAt = now;
+        this.updatedAt = now;
+    }
+
     public boolean isConfirmed() {
         return status == CourseStatus.CONFIRMED;
     }

@@ -41,6 +41,11 @@ public class CourseStop {
     @Column(name = "partnership_id")
     private Long partnershipId;
 
+    // 확정할 때의 할인 내용. 이후 제휴 내용이 바뀌어도, 코스가 확정된 뒤에 승인된 신청자까지
+    // 모두 같은 내용의 쿠폰을 받도록 남겨 둔다.
+    @Column(name = "partnership_discount")
+    private String partnershipDiscount;
+
     @Column(name = "stop_order", nullable = false)
     private Integer stopOrder;
 
@@ -72,6 +77,12 @@ public class CourseStop {
         stop.storeId = storeId;
         stop.recommendationReason = reason;
         return stop;
+    }
+
+    // 코스를 확정할 때, 제휴 기간 안인 상점 지점에 제휴 행사를 기록한다
+    public void assignPartnership(Long partnershipId, String discount) {
+        this.partnershipId = partnershipId;
+        this.partnershipDiscount = discount;
     }
 
     // 캠퍼스 건물 지점. AI 추천 이유는 없다.

@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 
 // 제휴 쿠폰. 탐방 신청자 한 명이 코스 안의 제휴 상점마다 한 장씩 받는다.
 @Entity
@@ -75,6 +76,21 @@ public class Coupon {
     // 사용 처리한 날짜. (store_id, used_date) 유니크로 하루 한 장을 DB에서도 보장한다.
     @Column(name = "used_date")
     private LocalDate usedDate;
+
+    // 쿠폰 발급 (코스 확정 때). 만료는 탐방 당일 23:59:59.
+    public Coupon(
+            Long applicationId, Long storeId, Long partnershipId, String code,
+            String discountSnapshot, LocalDateTime expiresAt
+    ) {
+        this.applicationId = applicationId;
+        this.storeId = storeId;
+        this.partnershipId = partnershipId;
+        this.code = code;
+        this.status = CouponStatus.ISSUED;
+        this.discountSnapshot = discountSnapshot;
+        this.issuedAt = LocalDateTime.now(ZONE).truncatedTo(ChronoUnit.SECONDS);
+        this.expiresAt = expiresAt;
+    }
 
     @PrePersist
     void onCreate() {
