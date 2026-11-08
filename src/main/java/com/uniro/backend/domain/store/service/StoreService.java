@@ -1,6 +1,7 @@
 package com.uniro.backend.domain.store.service;
 
 import com.uniro.backend.common.ApiException;
+import com.uniro.backend.domain.review.repository.StoreReviewSummaryRepository;
 import com.uniro.backend.domain.store.dto.NearbyStoreResponse;
 import com.uniro.backend.domain.store.dto.StoreSearchItemResponse;
 import com.uniro.backend.domain.store.entity.Store;
@@ -24,6 +25,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,6 +47,7 @@ public class StoreService {
     private final StoreRepository storeRepository;
     private final StorePartnershipRepository partnershipRepository;
     private final UniversityRepository universityRepository;
+    private final StoreReviewSummaryRepository summaryRepository;
 
     // 주변 상점 반경(미터). 팀에서 정하기 전까지 서버 기본값을 쓴다.
     @Value("${store.nearby.radius-meters:1500}")
@@ -156,8 +159,14 @@ public class StoreService {
                 LocalDate.now(SEOUL)
         ));
 
+        // 리뷰 요약도 상점마다 따로 묻지 않고 한 번에 가져온다
+        Map<Long, String> summaries = new HashMap<>();
+        summaryRepository.findByStoreIdIn(stores.stream().map(Store::getId).toList())
+                .forEach(r -> summaries.put(r.getStoreId(), r.getSummary()));
+
         return stores.stream()
-                .map(s -> NearbyStoreResponse.of(s, partnerIds.contains(s.getId())))
+                .map(s -> NearbyStoreResponse.of(
+                        s, partnerIds.contains(s.getId()), summaries.get(s.getId())))
                 .toList();
     }
 

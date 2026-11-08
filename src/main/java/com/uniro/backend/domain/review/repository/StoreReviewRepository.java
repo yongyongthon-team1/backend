@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 public interface StoreReviewRepository extends JpaRepository<StoreReview, Long> {
@@ -14,6 +15,10 @@ public interface StoreReviewRepository extends JpaRepository<StoreReview, Long> 
     // 이 쿠폰이나, 같은 탐방의 같은 상점에 이미 쓴 리뷰가 있는지
     boolean existsByCouponIdOrUserIdAndTourIdAndStoreId(
             Long couponId, Long userId, Long tourId, Long storeId);
+
+    // 주어진 쿠폰 중 이미 리뷰를 쓴 쿠폰 ID
+    @Query("select r.couponId from StoreReview r where r.couponId in :couponIds")
+    List<Long> findReviewedCouponIds(@Param("couponIds") Collection<Long> couponIds);
 
     // 상점의 리뷰 (최신순) + 작성자 이름. 작성자 행이 없어도 리뷰는 목록에 남는다.
     @Query("""

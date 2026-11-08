@@ -7,7 +7,7 @@ import com.uniro.backend.domain.coupon.entity.CouponStatus;
 import java.time.OffsetDateTime;
 
 // 고교생이 내 쿠폰을 조회했을 때의 쿠폰 하나.
-// reviewed는 리뷰 기능이 생기기 전까지 항상 false다.
+// reviewed는 이 쿠폰으로 리뷰를 이미 썼는지 여부다.
 public record MyCouponResponse(
         @JsonProperty("coupon_id") Long couponId,
         String code,
@@ -29,7 +29,8 @@ public record MyCouponResponse(
             Coupon coupon,
             Long tourId,
             String storeName,
-            CouponStatus status
+            CouponStatus status,
+            boolean reviewed
     ) {
         return new MyCouponResponse(
                 coupon.getId(),
@@ -40,7 +41,7 @@ public record MyCouponResponse(
                 status,
                 coupon.validUntil(),
                 coupon.usedAtOffset(),
-                false
+                reviewed
         );
     }
 }
