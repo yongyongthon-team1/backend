@@ -3,9 +3,12 @@ package com.uniro.backend.domain.tour.repository;
 import com.uniro.backend.domain.tour.entity.TourApplication;
 import com.uniro.backend.domain.tour.entity.TourApplicationStatus;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface TourApplicationRepository
@@ -23,4 +26,16 @@ public interface TourApplicationRepository
             Long tourId,
             Long userId
     );
+
+    Page<TourApplication> findByUserId(
+            Long userId,
+            Pageable pageable
+    );
+
+    long countByTourIdAndStatus(
+            Long tourId,
+            TourApplicationStatus status
+    );
+
+    List<TourApplication> findByTourId(Long tourId);
 }
