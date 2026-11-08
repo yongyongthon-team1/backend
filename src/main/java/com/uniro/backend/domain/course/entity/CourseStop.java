@@ -54,4 +54,33 @@ public class CourseStop {
     // AI 추천 이유
     @Column(name = "recommendation_reason", columnDefinition = "TEXT")
     private String recommendationReason;
+
+    private CourseStop(Long tourId, int order, LocalTime visitTime, String description) {
+        this.tourId = tourId;
+        this.stopOrder = order;
+        this.visitTime = visitTime;
+        this.description = description;
+    }
+
+    // 상점 지점. reason은 같은 상점을 유지했을 때 이어받는 AI 추천 이유(없으면 null).
+    public static CourseStop ofStore(
+            Long tourId, int order, Long storeId, LocalTime visitTime,
+            String description, String reason
+    ) {
+        CourseStop stop = new CourseStop(tourId, order, visitTime, description);
+        stop.stopType = StopType.STORE;
+        stop.storeId = storeId;
+        stop.recommendationReason = reason;
+        return stop;
+    }
+
+    // 캠퍼스 건물 지점. AI 추천 이유는 없다.
+    public static CourseStop ofCampus(
+            Long tourId, int order, Long campusBuildingId, LocalTime visitTime, String description
+    ) {
+        CourseStop stop = new CourseStop(tourId, order, visitTime, description);
+        stop.stopType = StopType.CAMPUS;
+        stop.campusBuildingId = campusBuildingId;
+        return stop;
+    }
 }

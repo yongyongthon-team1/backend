@@ -8,6 +8,7 @@ import com.uniro.backend.domain.application.dto.ApplicationCreateResponse;
 import com.uniro.backend.domain.application.dto.ApplicationDecisionRequest;
 import com.uniro.backend.domain.application.dto.ApplicationDecisionResponse;
 import com.uniro.backend.common.Kst;
+import com.uniro.backend.common.TourLocker;
 import com.uniro.backend.domain.coupon.service.CouponService;
 import com.uniro.backend.domain.guardianconsent.repository.GuardianConsentRepository;
 import com.uniro.backend.domain.store.support.StoreErrors;
@@ -23,7 +24,6 @@ import com.uniro.backend.domain.verification.entity.VerificationStatus;
 import com.uniro.backend.domain.verification.repository.StudentVerificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +49,7 @@ public class ApplicationService {
     private final GuardianConsentRepository guardianConsentRepository;
     private final CouponService couponService;
     private final TransactionTemplate transactionTemplate;
+    private final TourLocker tourLocker;
 
     // 탐방 신청 (고교생). 재학 인증과 보호자 동의가 끝난 고교생만 신청할 수 있다.
     @Transactional
@@ -60,7 +61,7 @@ public class ApplicationService {
         // 마지막 자리에 두 명이 동시에 신청해도 정원을 넘지 않도록 탐방 행을 잠그고 센다.
         // 잠금은 이 트랜잭션의 첫 DB 작업이어야 한다. 다른 조회가 먼저 있으면 그 시점의 데이터가
         // 읽기 기준이 되어(REPEATABLE READ), 잠금을 기다린 뒤에도 앞 사람의 신청을 세지 못한다.
-        Tour tour = lockTour(tourId);
+        Tour tour = tourLocker.lock(tourId);
 
         requireEligible(student);
         requireOpen(tour);
@@ -116,7 +117,7 @@ public class ApplicationService {
     private ApplicationDecisionResponse decideLocked(
             Long applicationId, Long tourId, TourApplicationStatus decision
     ) {
-        Tour tour = lockTour(tourId);
+        Tour tour = tourLocker.lock(tourId);
         TourApplication application = applicationRepository.findById(applicationId)
                 .orElseThrow(this::applicationNotFound);
 
@@ -165,7 +166,7 @@ public class ApplicationService {
     }
 
     private ApplicationCancelResponse cancelLocked(Long applicationId, Long tourId) {
-        Tour tour = lockTour(tourId);
+        Tour tour = tourLocker.lock(tourId);
 
         TourApplication application = applicationRepository.findById(applicationId)
                 .orElseThrow(this::applicationNotFound);
@@ -209,16 +210,6 @@ public class ApplicationService {
     private boolean isOpen(Tour tour) {
         return tour.getStatus() == TourStatus.RECRUITING
                 || tour.getStatus() == TourStatus.CLOSED;
-    }
-
-    private Tour lockTour(Long tourId) {
-        try {
-            return tourRepository.findByIdForUpdate(tourId).orElseThrow(this::tourNotFound);
-        } catch (PessimisticLockingFailureException e) {
-            // 동시 요청과 겹쳐 잠금 대기 초과나 데드락으로 끊긴 경우
-            throw new ApiException(
-                    HttpStatus.CONFLICT, "E409", "잠시 후 다시 시도해 주세요");
-        }
     }
 
     private ApiException tourNotFound() {

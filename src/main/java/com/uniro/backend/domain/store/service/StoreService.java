@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -168,6 +170,25 @@ public class StoreService {
                 .map(s -> NearbyStoreResponse.of(
                         s, partnerIds.contains(s.getId()), summaries.get(s.getId())))
                 .toList();
+    }
+
+    // 주어진 상점 중 캠퍼스 주변(주변 상점 조회와 같은 반경) 안에 있는 상점 ID
+    public Set<Long> nearbyStoreIds(Long campusId, Collection<Long> storeIds) {
+        University campus = universityRepository.findById(campusId)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND, "E404", "존재하지 않는 캠퍼스입니다"));
+
+        Geo.Origin origin = Geo.origin(
+                campus.getLatitude().doubleValue(),
+                campus.getLongitude().doubleValue()
+        );
+
+        return storeRepository.findAllById(storeIds).stream()
+                .filter(s -> origin.distanceTo(
+                        s.getLatitude().doubleValue(),
+                        s.getLongitude().doubleValue()) <= radiusMeters)
+                .map(Store::getId)
+                .collect(Collectors.toSet());
     }
 
     // 상점과 기준점까지의 거리(미터)
