@@ -1,6 +1,7 @@
 package com.uniro.backend.common;
 
 import com.uniro.backend.config.JwtProvider;
+import com.uniro.backend.domain.user.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Component;
 public class TokenAuthenticator {
 
     private final JwtProvider jwtProvider;
+    private final UserRepository userRepository;
 
+    // 토큰이 유효하고 해당 사용자가 아직 존재할 때만 사용자 ID를 돌려준다
     public Long requireUserId(String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             throw unauthorized();
@@ -24,11 +27,19 @@ public class TokenAuthenticator {
             throw unauthorized();
         }
 
+        Long userId;
+
         try {
-            return jwtProvider.getUserId(token);
+            userId = jwtProvider.getUserId(token);
         } catch (JwtException | IllegalArgumentException e) {
             throw unauthorized();
         }
+
+        if (!userRepository.existsById(userId)) {
+            throw unauthorized();
+        }
+
+        return userId;
     }
 
     private ApiException unauthorized() {
