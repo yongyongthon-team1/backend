@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 // 상점 리뷰. 쿠폰 한 장에 리뷰 하나, 같은 탐방에서는 같은 상점에 한 번만 쓸 수 있다.
 @Entity
@@ -65,8 +64,7 @@ public class StoreReview {
             throw new IllegalArgumentException("별점은 " + RATING_MIN + "~" + RATING_MAX + " 사이여야 합니다");
         }
 
-        // DB 시각 정밀도와 응답이 어긋나지 않도록 초 단위로 맞춘다
-        LocalDateTime now = Kst.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = Kst.nowToSeconds();
 
         this.userId = userId;
         this.tourId = tourId;

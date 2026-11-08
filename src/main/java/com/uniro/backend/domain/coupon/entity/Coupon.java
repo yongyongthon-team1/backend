@@ -1,5 +1,6 @@
 package com.uniro.backend.domain.coupon.entity;
 
+import com.uniro.backend.common.Kst;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -9,7 +10,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 
 // 제휴 쿠폰. 탐방 신청자 한 명이 코스 안의 제휴 상점마다 한 장씩 받는다.
 @Entity
@@ -88,7 +88,7 @@ public class Coupon {
         this.code = code;
         this.status = CouponStatus.ISSUED;
         this.discountSnapshot = discountSnapshot;
-        this.issuedAt = LocalDateTime.now(ZONE).truncatedTo(ChronoUnit.SECONDS);
+        this.issuedAt = Kst.nowToSeconds();
         this.expiresAt = expiresAt;
     }
 

@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 // 탐방 코스. 탐방당 하나이고, 탐방 ID가 곧 코스의 ID다.
 @Entity
@@ -36,8 +35,7 @@ public class Course implements Persistable<Long> {
 
     // 새 코스는 초안으로 시작한다
     public Course(Long tourId) {
-        // DB 시각 정밀도와 어긋나지 않도록 초 단위로 맞춘다
-        LocalDateTime now = Kst.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = Kst.nowToSeconds();
 
         this.tourId = tourId;
         this.isNew = true;
@@ -48,7 +46,7 @@ public class Course implements Persistable<Long> {
 
     // 지점을 바꿨을 때 수정 시각을 갱신한다
     public void touch() {
-        this.updatedAt = Kst.now().truncatedTo(ChronoUnit.SECONDS);
+        this.updatedAt = Kst.nowToSeconds();
     }
 
     // 탐방 ID를 직접 PK로 쓰므로 새 코스인지 알려 주어야, 저장할 때 헛된 SELECT를 하지 않는다
@@ -73,7 +71,7 @@ public class Course implements Persistable<Long> {
 
     // 확정한다. 한 번 확정하면 되돌릴 수 없다.
     public void confirm() {
-        LocalDateTime now = Kst.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = Kst.nowToSeconds();
 
         this.status = CourseStatus.CONFIRMED;
         this.confirmedAt = now;

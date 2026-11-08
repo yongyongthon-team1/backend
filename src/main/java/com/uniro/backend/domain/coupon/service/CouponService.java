@@ -1,6 +1,7 @@
 package com.uniro.backend.domain.coupon.service;
 
 import com.uniro.backend.common.ApiException;
+import com.uniro.backend.common.Kst;
 import com.uniro.backend.domain.coupon.dto.CouponCheckResponse;
 import com.uniro.backend.domain.coupon.dto.CouponRedeemResponse;
 import com.uniro.backend.domain.coupon.dto.MyCouponResponse;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -181,9 +181,7 @@ public class CouponService {
             Coupon coupon = couponRepository.findByCodeForUpdate(trimmed)
                     .orElseThrow(this::couponNotFound);
 
-            // DB 시각 정밀도(마이크로초)와 응답이 어긋나지 않도록 초 단위로 맞춘다
-            LocalDateTime now = LocalDateTime.now(Coupon.ZONE)
-                    .truncatedTo(ChronoUnit.SECONDS);
+            LocalDateTime now = Kst.nowToSeconds();
 
             validateUsable(coupon, now);
 
