@@ -39,4 +39,46 @@ public class GuardianConsent {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    // 최초 보호자 동의 요청
+    public GuardianConsent(
+            Long userId,
+            String guardianName,
+            String guardianEmail,
+            String tokenHash,
+            LocalDateTime now
+    ) {
+        this.id = userId;
+        this.createdAt = now;
+
+        requestConsent(
+                guardianName,
+                guardianEmail,
+                tokenHash,
+                now
+        );
+    }
+
+    // 최초 요청 또는 재요청 시 사용
+    public void requestConsent(
+            String guardianName,
+            String guardianEmail,
+            String tokenHash,
+            LocalDateTime now
+    ) {
+        this.guardianName = guardianName;
+        this.guardianEmail = guardianEmail;
+        this.tokenHash = tokenHash;
+        this.status = "PENDING";
+        this.expiresAt = now.plusDays(7);
+        this.agreedAt = null;
+        this.updatedAt = now;
+    }
+
+    // 보호자 동의 또는 거부 처리
+    public void respond(boolean agree, LocalDateTime now) {
+        this.status = agree ? "AGREED" : "REJECTED";
+        this.agreedAt = agree ? now : null;
+        this.updatedAt = now;
+    }
 }
