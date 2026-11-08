@@ -18,6 +18,9 @@ public record UserMeResponse(
         @JsonProperty("school_name")
         String schoolName,
 
+        @JsonProperty("university_id")
+        Long universityId,
+
         Integer grade,
 
         @JsonProperty("interest_major")
