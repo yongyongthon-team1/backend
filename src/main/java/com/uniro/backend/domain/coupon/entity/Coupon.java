@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 
 // 제휴 쿠폰. 탐방 신청자 한 명이 코스 안의 제휴 상점마다 한 장씩 받는다.
 @Entity
@@ -32,6 +34,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Coupon {
 
+    // 쿠폰 코드 자리수. 컬럼 길이와 입력 검증이 같은 값을 쓴다.
+    public static final int CODE_LENGTH = 6;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -46,7 +51,7 @@ public class Coupon {
     private Long partnershipId;
 
     // 6자리 쿠폰 코드
-    @Column(name = "code", nullable = false, length = 6, columnDefinition = "CHAR(6)")
+    @Column(name = "code", nullable = false, length = CODE_LENGTH, columnDefinition = "CHAR(6)")
     private String code;
 
     @Enumerated(EnumType.STRING)
@@ -78,14 +83,23 @@ public class Coupon {
         }
     }
 
+    // 쿠폰의 날짜·시각은 모두 이 시간대 기준이다
+    public static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
+
     // 탐방 날짜 (쿠폰은 탐방 당일에만 쓸 수 있다)
     public LocalDate tourDate() {
         return expiresAt.toLocalDate();
     }
 
-    // 지금 시각 기준의 상태. 유효기간이 지난 발급 쿠폰은 EXPIRED로 본다.
+    // 유효기간 끝 (API 응답용, +09:00 포함)
+    public OffsetDateTime validUntil() {
+        return expiresAt.atZone(ZONE).toOffsetDateTime();
+    }
+
+    // 지금 시각 기준의 상태. 탐방 날짜가 지난 발급 쿠폰은 EXPIRED로 본다.
+    // 초 단위가 아니라 날짜로 비교해서, 탐방 당일 마지막 1초도 유효하다.
     public CouponStatus statusAt(LocalDateTime now) {
-        if (status == CouponStatus.ISSUED && now.isAfter(expiresAt)) {
+        if (status == CouponStatus.ISSUED && now.toLocalDate().isAfter(tourDate())) {
             return CouponStatus.EXPIRED;
         }
 

@@ -2,6 +2,7 @@ package com.uniro.backend.common;
 
 import com.uniro.backend.config.JwtProvider;
 import com.uniro.backend.domain.user.entity.User;
+import com.uniro.backend.domain.user.entity.UserRole;
 import com.uniro.backend.domain.user.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,18 @@ public class TokenAuthenticator {
     public User requireUser(String authorization) {
         return userRepository.findById(parseUserId(authorization))
                 .orElseThrow(this::unauthorized);
+    }
+
+    // 사장님만 쓸 수 있는 API용: 로그인한 사용자가 사장님이 아니면 403
+    public User requireOwner(String authorization) {
+        User user = requireUser(authorization);
+
+        if (user.getRole() != UserRole.OWNER) {
+            throw new ApiException(
+                    HttpStatus.FORBIDDEN, "E403", "사장님만 이용할 수 있습니다");
+        }
+
+        return user;
     }
 
     private Long parseUserId(String authorization) {
