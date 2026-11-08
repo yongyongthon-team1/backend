@@ -1,5 +1,6 @@
 package com.uniro.backend.domain.coupon.entity;
 
+import com.uniro.backend.common.Kst;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -75,6 +76,21 @@ public class Coupon {
     // 사용 처리한 날짜. (store_id, used_date) 유니크로 하루 한 장을 DB에서도 보장한다.
     @Column(name = "used_date")
     private LocalDate usedDate;
+
+    // 쿠폰 발급 (코스 확정 때). 만료는 탐방 당일 23:59:59.
+    public Coupon(
+            Long applicationId, Long storeId, Long partnershipId, String code,
+            String discountSnapshot, LocalDateTime expiresAt
+    ) {
+        this.applicationId = applicationId;
+        this.storeId = storeId;
+        this.partnershipId = partnershipId;
+        this.code = code;
+        this.status = CouponStatus.ISSUED;
+        this.discountSnapshot = discountSnapshot;
+        this.issuedAt = Kst.nowToSeconds();
+        this.expiresAt = expiresAt;
+    }
 
     @PrePersist
     void onCreate() {

@@ -62,6 +62,10 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
     int expireIssuedByApplicationIds(
             @Param("applicationIds") Collection<Long> applicationIds);
 
+    // 주어진 코드 중 이미 쓰이고 있는 코드
+    @Query("select c.code from Coupon c where c.code in :codes")
+    List<String> findExistingCodes(@Param("codes") Collection<String> codes);
+
     // 그 가게에서 이날 이미 사용 처리된 쿠폰이 있는지
     boolean existsByStoreIdAndUsedDate(Long storeId, LocalDate usedDate);
 

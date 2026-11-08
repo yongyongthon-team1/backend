@@ -72,6 +72,11 @@ public interface TourApplicationRepository
     ) {
     }
 
+    // 탐방의 해당 상태 신청 ID들
+    @Query("select a.id from TourApplication a where a.tourId = :tourId and a.status = :status")
+    List<Long> findIdsByTourIdAndStatus(
+            @Param("tourId") Long tourId, @Param("status") TourApplicationStatus status);
+
     // 이미 유효한(신청 중·승인) 신청이 있는지
     boolean existsByTourIdAndUserIdAndStatusIn(
             Long tourId,

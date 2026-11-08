@@ -18,7 +18,8 @@ import java.util.Map;
         "com.uniro.backend.domain.store",
         "com.uniro.backend.domain.coupon",
         "com.uniro.backend.domain.application",
-        "com.uniro.backend.domain.review"
+        "com.uniro.backend.domain.review",
+        "com.uniro.backend.domain.course"
 })
 public class StoreExceptionHandler {
 

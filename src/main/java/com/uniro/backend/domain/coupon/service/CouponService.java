@@ -1,6 +1,7 @@
 package com.uniro.backend.domain.coupon.service;
 
 import com.uniro.backend.common.ApiException;
+import com.uniro.backend.common.Kst;
 import com.uniro.backend.domain.coupon.dto.CouponCheckResponse;
 import com.uniro.backend.domain.coupon.dto.CouponRedeemResponse;
 import com.uniro.backend.domain.coupon.dto.MyCouponResponse;
@@ -18,10 +19,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -29,6 +34,10 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class CouponService {
+
+    // 헷갈리기 쉬운 0/O, 1/I를 뺀 코드 문자
+    private static final String CODE_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final CouponRepository couponRepository;
     private final StoreRepository storeRepository;
@@ -65,6 +74,69 @@ public class CouponService {
         }
 
         return couponRepository.expireIssuedByApplicationIds(applicationIds);
+    }
+
+    // 쿠폰 발급 대상: 코스 안의 제휴 상점과 그 제휴 행사
+    public record CouponTarget(Long storeId, Long partnershipId, String discount) {
+    }
+
+    // 신청마다 제휴 상점 하나에 쿠폰 한 장씩 발급하고, 발급한 쿠폰 수를 돌려준다.
+    // 호출한 쪽의 트랜잭션에 참여하므로, 코스 확정과 함께 커밋되거나 함께 되돌아간다.
+    @Transactional
+    public int issueCoupons(
+            Collection<Long> applicationIds, Collection<CouponTarget> targets, LocalDate tourDate
+    ) {
+        int total = applicationIds.size() * targets.size();
+        if (total == 0) {
+            return 0;
+        }
+
+        LocalDateTime expiresAt = tourDate.atTime(23, 59, 59);
+        Iterator<String> codes = newCodes(total).iterator();
+        List<Coupon> coupons = new ArrayList<>(total);
+
+        for (Long applicationId : applicationIds) {
+            for (CouponTarget target : targets) {
+                coupons.add(new Coupon(
+                        applicationId, target.storeId(), target.partnershipId(),
+                        codes.next(), target.discount(), expiresAt));
+            }
+        }
+
+        try {
+            couponRepository.saveAllAndFlush(coupons);
+        } catch (DataIntegrityViolationException e) {
+            // 다른 요청이 같은 코드를 방금 쓴 드문 경우
+            throw new ApiException(
+                    HttpStatus.CONFLICT, "E409", "잠시 후 다시 시도해 주세요");
+        }
+
+        return total;
+    }
+
+    // 서로 겹치지 않고 아직 쓰이지 않은 쿠폰 코드를 count개 만든다
+    private Set<String> newCodes(int count) {
+        Set<String> codes = new LinkedHashSet<>();
+
+        while (true) {
+            while (codes.size() < count) {
+                codes.add(randomCode());
+            }
+
+            List<String> taken = couponRepository.findExistingCodes(codes);
+            if (taken.isEmpty()) {
+                return codes;
+            }
+            taken.forEach(codes::remove);
+        }
+    }
+
+    private String randomCode() {
+        StringBuilder code = new StringBuilder(Coupon.CODE_LENGTH);
+        for (int i = 0; i < Coupon.CODE_LENGTH; i++) {
+            code.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
+        }
+        return code.toString();
     }
 
     // 승인된 신청이 아니면(취소·거절) 아직 쓰지 않은 쿠폰은 만료로 본다.
@@ -109,9 +181,7 @@ public class CouponService {
             Coupon coupon = couponRepository.findByCodeForUpdate(trimmed)
                     .orElseThrow(this::couponNotFound);
 
-            // DB 시각 정밀도(마이크로초)와 응답이 어긋나지 않도록 초 단위로 맞춘다
-            LocalDateTime now = LocalDateTime.now(Coupon.ZONE)
-                    .truncatedTo(ChronoUnit.SECONDS);
+            LocalDateTime now = Kst.nowToSeconds();
 
             validateUsable(coupon, now);
 

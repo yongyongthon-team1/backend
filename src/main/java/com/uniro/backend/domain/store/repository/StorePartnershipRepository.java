@@ -15,6 +15,18 @@ public interface StorePartnershipRepository
 
     Optional<StorePartnership> findByStoreId(Long storeId);
 
+    // 그날 제휴 기간 안에 있는 제휴 행사
+    @Query("""
+            select p from StorePartnership p
+            where p.storeId in :storeIds
+              and p.startDate <= :date
+              and p.endDate >= :date
+            """)
+    List<StorePartnership> findActiveOn(
+            @Param("storeIds") Collection<Long> storeIds,
+            @Param("date") LocalDate date
+    );
+
     // 오늘이 제휴 기간 안에 있는 상점 ID들
     @Query("""
             select p.storeId from StorePartnership p
