@@ -19,6 +19,10 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
 
     boolean existsByOwnerId(Long ownerId);
 
+    // 상점 전체를 읽지 않고 사장님 가게의 ID만 조회
+    @Query("select s.id from Store s where s.ownerId = :ownerId")
+    Optional<Long> findIdByOwnerId(@Param("ownerId") Long ownerId);
+
     boolean existsByNameAndAddress(String name, String address);
 
     boolean existsByNameAndAddressAndIdNot(String name, String address, Long id);

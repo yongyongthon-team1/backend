@@ -12,7 +12,6 @@ import com.uniro.backend.domain.store.repository.StorePartnershipRepository;
 import com.uniro.backend.domain.store.repository.StoreRepository;
 import com.uniro.backend.domain.store.support.StoreErrors;
 import com.uniro.backend.domain.user.entity.User;
-import com.uniro.backend.domain.user.entity.UserRole;
 import com.uniro.backend.domain.verification.entity.BusinessVerification;
 import com.uniro.backend.domain.verification.repository.BusinessVerificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,8 +41,6 @@ public class MyStoreService {
     // 가게 등록 (사장님 계정 연결)
     @Transactional
     public StoreResponse register(User user, StoreRegisterRequest request) {
-        requireOwner(user);
-
         boolean verified = businessVerificationRepository.findById(user.getId())
                 .filter(BusinessVerification::isVerified)
                 .isPresent();
@@ -76,16 +73,12 @@ public class MyStoreService {
     // 내 가게 조회
     @Transactional(readOnly = true)
     public MyStoreResponse getMine(User user) {
-        requireOwner(user);
-
         return toResponse(findMine(user));
     }
 
     // 가게 수정 (보낸 필드만)
     @Transactional
     public MyStoreResponse updateMine(User user, StoreUpdateRequest request) {
-        requireOwner(user);
-
         if (request.name() == null
                 && request.address() == null
                 && request.category() == null) {
@@ -120,8 +113,6 @@ public class MyStoreService {
     public MyStoreResponse.Partnership savePartnership(
             User user, PartnershipRequest request
     ) {
-        requireOwner(user);
-
         String discount = requiredText(
                 "discount_text", request.discountText(), StorePartnership.DISCOUNT_MAX);
 
@@ -207,13 +198,6 @@ public class MyStoreService {
         return storeRepository.findByOwnerId(user.getId())
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND, "E404", "연결한 가게가 없습니다"));
-    }
-
-    private void requireOwner(User user) {
-        if (user.getRole() != UserRole.OWNER) {
-            throw new ApiException(
-                    HttpStatus.FORBIDDEN, "E403", "사장님만 이용할 수 있습니다");
-        }
     }
 
     private MyStoreResponse toResponse(Store store) {

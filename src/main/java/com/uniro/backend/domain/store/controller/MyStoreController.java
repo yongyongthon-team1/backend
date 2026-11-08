@@ -39,7 +39,7 @@ public class MyStoreController {
             @RequestBody StoreRegisterRequest request
     ) {
         var data = myStoreService.register(
-                authenticator.requireUser(authorization), request);
+                authenticator.requireOwner(authorization), request);
 
         return response(HttpStatus.CREATED, "S201", "가게 등록 성공", data);
     }
@@ -55,7 +55,7 @@ public class MyStoreController {
             String authorization
     ) {
         var data = myStoreService.getMine(
-                authenticator.requireUser(authorization));
+                authenticator.requireOwner(authorization));
 
         return response(HttpStatus.OK, "S200", "조회 성공", data);
     }
@@ -72,7 +72,7 @@ public class MyStoreController {
             @RequestBody StoreUpdateRequest request
     ) {
         var data = myStoreService.updateMine(
-                authenticator.requireUser(authorization), request);
+                authenticator.requireOwner(authorization), request);
 
         return response(HttpStatus.OK, "S200", "수정 성공", data);
     }
@@ -89,7 +89,7 @@ public class MyStoreController {
             @RequestBody PartnershipRequest request
     ) {
         var data = myStoreService.savePartnership(
-                authenticator.requireUser(authorization), request);
+                authenticator.requireOwner(authorization), request);
 
         return response(HttpStatus.OK, "S200", "저장 성공", data);
     }
