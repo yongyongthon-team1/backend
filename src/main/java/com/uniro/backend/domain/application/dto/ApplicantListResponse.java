@@ -1,7 +1,7 @@
 package com.uniro.backend.domain.application.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.uniro.backend.domain.application.support.Kst;
+import com.uniro.backend.common.Kst;
 import com.uniro.backend.domain.tour.entity.TourApplicationStatus;
 import com.uniro.backend.domain.tour.repository.TourApplicationRepository.ApplicantRow;
 

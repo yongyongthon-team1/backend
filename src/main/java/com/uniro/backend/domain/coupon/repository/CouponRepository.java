@@ -1,6 +1,7 @@
 package com.uniro.backend.domain.coupon.repository;
 
 import com.uniro.backend.domain.coupon.entity.Coupon;
+import com.uniro.backend.domain.coupon.entity.CouponStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -63,4 +64,17 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
     // 그 가게에서 이날 이미 사용 처리된 쿠폰이 있는지
     boolean existsByStoreIdAndUsedDate(Long storeId, LocalDate usedDate);
+
+    // 리뷰를 쓸 수 있는지 확인하는 데 필요한 값: 쿠폰의 상점·상태와, 그 신청의 신청자·탐방
+    @Query("""
+            select new com.uniro.backend.domain.coupon.repository.CouponRepository$ReviewTarget(
+                c.storeId, c.status, a.userId, a.tourId)
+            from Coupon c
+            join TourApplication a on a.id = c.applicationId
+            where c.id = :id
+            """)
+    Optional<ReviewTarget> findReviewTarget(@Param("id") Long id);
+
+    record ReviewTarget(Long storeId, CouponStatus status, Long userId, Long tourId) {
+    }
 }

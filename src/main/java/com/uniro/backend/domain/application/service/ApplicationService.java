@@ -7,7 +7,7 @@ import com.uniro.backend.domain.application.dto.ApplicationCreateRequest;
 import com.uniro.backend.domain.application.dto.ApplicationCreateResponse;
 import com.uniro.backend.domain.application.dto.ApplicationDecisionRequest;
 import com.uniro.backend.domain.application.dto.ApplicationDecisionResponse;
-import com.uniro.backend.domain.application.support.Kst;
+import com.uniro.backend.common.Kst;
 import com.uniro.backend.domain.coupon.service.CouponService;
 import com.uniro.backend.domain.guardianconsent.repository.GuardianConsentRepository;
 import com.uniro.backend.domain.store.support.StoreErrors;

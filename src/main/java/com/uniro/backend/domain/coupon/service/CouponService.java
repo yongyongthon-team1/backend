@@ -8,6 +8,7 @@ import com.uniro.backend.domain.coupon.entity.Coupon;
 import com.uniro.backend.domain.coupon.entity.CouponStatus;
 import com.uniro.backend.domain.coupon.repository.CouponRepository;
 import com.uniro.backend.domain.coupon.repository.MyCouponRow;
+import com.uniro.backend.domain.review.repository.StoreReviewRepository;
 import com.uniro.backend.domain.store.repository.StoreRepository;
 import com.uniro.backend.domain.store.support.StoreErrors;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 // 사장님이 학생이 보여 준 쿠폰을 확인하고 사용 처리한다
 @Service
@@ -29,15 +32,26 @@ public class CouponService {
 
     private final CouponRepository couponRepository;
     private final StoreRepository storeRepository;
+    private final StoreReviewRepository reviewRepository;
 
     // 내 쿠폰 조회 (고교생). 유효기간이 지난 발급 쿠폰은 EXPIRED로 내려간다.
     @Transactional(readOnly = true)
     public List<MyCouponResponse> myCoupons(Long userId, Long tourId, Long storeId) {
         LocalDateTime now = LocalDateTime.now(Coupon.ZONE);
 
-        return couponRepository.findMine(userId, tourId, storeId).stream()
+        List<MyCouponRow> rows = couponRepository.findMine(userId, tourId, storeId);
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+
+        // 쿠폰마다 따로 묻지 않고, 리뷰를 쓴 쿠폰을 한 번에 가져온다
+        Set<Long> reviewed = new HashSet<>(reviewRepository.findReviewedCouponIds(
+                rows.stream().map(r -> r.coupon().getId()).toList()));
+
+        return rows.stream()
                 .map(r -> MyCouponResponse.of(
-                        r.coupon(), r.tourId(), r.storeName(), statusFor(r, now)))
+                        r.coupon(), r.tourId(), r.storeName(), statusFor(r, now),
+                        reviewed.contains(r.coupon().getId())))
                 .toList();
     }
 

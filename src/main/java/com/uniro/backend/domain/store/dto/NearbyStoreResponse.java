@@ -6,7 +6,7 @@ import com.uniro.backend.domain.store.entity.Store;
 import java.math.BigDecimal;
 
 // 주변 상점 조회 응답의 상점 하나.
-// review_summary는 리뷰 요약 기능이 생기기 전까지 항상 null이다.
+// review_summary는 AI 리뷰 요약이다. 요약이 아직 없으면 null.
 public record NearbyStoreResponse(
         @JsonProperty("store_id") Long storeId,
         String name,
@@ -17,7 +17,7 @@ public record NearbyStoreResponse(
         @JsonProperty("is_partner") boolean isPartner,
         @JsonProperty("review_summary") String reviewSummary
 ) {
-    public static NearbyStoreResponse of(Store store, boolean partner) {
+    public static NearbyStoreResponse of(Store store, boolean partner, String reviewSummary) {
         return new NearbyStoreResponse(
                 store.getId(),
                 store.getName(),
@@ -26,7 +26,7 @@ public record NearbyStoreResponse(
                 store.getLatitude(),
                 store.getLongitude(),
                 partner,
-                null
+                reviewSummary
         );
     }
 }

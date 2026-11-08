@@ -17,7 +17,8 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = {
         "com.uniro.backend.domain.store",
         "com.uniro.backend.domain.coupon",
-        "com.uniro.backend.domain.application"
+        "com.uniro.backend.domain.application",
+        "com.uniro.backend.domain.review"
 })
 public class StoreExceptionHandler {
 
