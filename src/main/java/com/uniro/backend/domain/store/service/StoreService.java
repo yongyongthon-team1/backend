@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,11 +30,11 @@ public class StoreService {
         String trimmed = keyword == null ? "" : keyword.trim();
 
         if (trimmed.length() < 2) {
-            throw invalid("keyword", "검색어는 2자 이상 입력해 주세요");
+            throw ApiException.invalid("keyword", "검색어는 2자 이상 입력해 주세요");
         }
 
         if (trimmed.length() > MAX_KEYWORD_LENGTH) {
-            throw invalid(
+            throw ApiException.invalid(
                     "keyword",
                     "검색어는 " + MAX_KEYWORD_LENGTH + "자 이하로 입력해 주세요"
             );
@@ -45,10 +44,10 @@ public class StoreService {
         int pageSize = size == null ? DEFAULT_SIZE : size;
 
         if (pageNo < 1) {
-            throw invalid("page", "page는 1 이상이어야 합니다");
+            throw ApiException.invalid("page", "page는 1 이상이어야 합니다");
         }
         if (pageSize < 1 || pageSize > MAX_SIZE) {
-            throw invalid("size", "size는 1~" + MAX_SIZE + " 사이여야 합니다");
+            throw ApiException.invalid("size", "size는 1~" + MAX_SIZE + " 사이여야 합니다");
         }
 
         Page<Store> result = storeRepository.findByNameContaining(
@@ -70,15 +69,5 @@ public class StoreService {
         data.put("size", pageSize);
         data.put("total", result.getTotalElements());
         return data;
-    }
-
-    private ApiException invalid(String field, String reason) {
-        return new ApiException(
-                HttpStatus.BAD_REQUEST,
-                "E400",
-                "요청 값이 유효하지 않습니다",
-                field,
-                reason
-        );
     }
 }

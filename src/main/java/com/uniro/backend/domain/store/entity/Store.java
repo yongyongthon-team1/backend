@@ -20,6 +20,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Store {
 
+    // 입력 검증과 컬럼 길이가 어긋나지 않도록 한 곳에서 정한다
+    public static final int NAME_MAX = 150;
+    public static final int ADDRESS_MAX = 255;
+    public static final int CATEGORY_MAX = 100;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,14 +33,14 @@ public class Store {
     @Column(name = "owner_id", unique = true)
     private Long ownerId;
 
-    @Column(name = "name", nullable = false, length = 150)
+    @Column(name = "name", nullable = false, length = NAME_MAX)
     private String name;
 
-    @Column(name = "address", nullable = false, length = 255)
+    @Column(name = "address", nullable = false, length = ADDRESS_MAX)
     private String address;
 
     // 식당, 카페, 놀거리 등 (enum이 아니라 문자열)
-    @Column(name = "category", nullable = false, length = 100)
+    @Column(name = "category", nullable = false, length = CATEGORY_MAX)
     private String category;
 
     @Column(name = "administrative_dong", length = 100)
@@ -68,6 +73,24 @@ public class Store {
         this.category = category;
         this.latitude = latitude;
         this.longitude = longitude;
+    }
+
+    // 사장님 계정에 연결
+    public void assignOwner(Long ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    // 보낸 항목만 수정 (null이면 그대로 둔다)
+    public void update(String name, String address, String category) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (address != null) {
+            this.address = address;
+        }
+        if (category != null) {
+            this.category = category;
+        }
     }
 
     @PrePersist

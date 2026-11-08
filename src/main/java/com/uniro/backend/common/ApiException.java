@@ -32,4 +32,15 @@ public class ApiException extends RuntimeException {
         this.field = field;
         this.reason = reason;
     }
+
+    // 요청 값 오류(400): 어떤 필드가 왜 잘못됐는지 errors에 담긴다
+    public static ApiException invalid(String field, String reason) {
+        return new ApiException(
+                HttpStatus.BAD_REQUEST,
+                "E400",
+                "요청 값이 유효하지 않습니다",
+                field,
+                reason
+        );
+    }
 }
