@@ -40,7 +40,27 @@ public interface StoreReviewRepository extends JpaRepository<StoreReview, Long> 
             """)
     ReviewStats stats(@Param("storeId") Long storeId);
 
+    // 기간 안(from 포함, to 미포함)에 쓴 상점의 리뷰 수와 평균 별점
+    @Query("""
+            select new com.uniro.backend.domain.review.repository.StoreReviewRepository$ReviewStats(
+                count(r), avg(r.rating))
+            from StoreReview r
+            where r.storeId = :storeId
+              and r.createdAt >= :from
+              and r.createdAt < :to
+            """)
+    ReviewStats statsBetween(
+            @Param("storeId") Long storeId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
     record ReviewStats(long count, Double average) {
+
+        // 소수 첫째 자리까지 반올림한 평균 별점. 리뷰가 없으면 0.0.
+        public double roundedAverage() {
+            return average == null ? 0.0 : Math.round(average * 10) / 10.0;
+        }
     }
 
     record ReviewRow(

@@ -5,16 +5,19 @@ import com.uniro.backend.domain.store.dto.PartnershipRequest;
 import com.uniro.backend.domain.store.dto.StoreRegisterRequest;
 import com.uniro.backend.domain.store.dto.StoreUpdateRequest;
 import com.uniro.backend.domain.store.service.MyStoreService;
+import com.uniro.backend.domain.store.service.StoreReportService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -25,6 +28,7 @@ import java.util.Map;
 public class MyStoreController {
 
     private final MyStoreService myStoreService;
+    private final StoreReportService reportService;
     private final TokenAuthenticator authenticator;
 
     // 가게 등록 (사장님 계정 연결)
@@ -92,6 +96,26 @@ public class MyStoreController {
                 authenticator.requireOwner(authorization), request);
 
         return response(HttpStatus.OK, "S200", "저장 성공", data);
+    }
+
+    // 방문·리뷰 리포트
+    @Operation(
+            summary = "방문·리뷰 리포트 조회",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @GetMapping("/report")
+    public ResponseEntity<Map<String, Object>> report(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        var data = reportService.report(
+                authenticator.requireOwner(authorization), from, to);
+
+        return response(HttpStatus.OK, "S200", "조회 성공", data);
     }
 
     private ResponseEntity<Map<String, Object>> response(
