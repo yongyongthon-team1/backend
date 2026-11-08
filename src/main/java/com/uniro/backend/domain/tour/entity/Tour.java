@@ -72,6 +72,20 @@ public class Tour {
         this.status = TourStatus.COMPLETED;
     }
 
+    // 정원이 차서 모집을 마감 (모집 중일 때만)
+    public void close() {
+        if (this.status == TourStatus.RECRUITING) {
+            this.status = TourStatus.CLOSED;
+        }
+    }
+
+    // 자리가 나서 모집을 다시 연다 (마감 상태일 때만. 취소·완료된 탐방은 바꾸지 않는다)
+    public void reopen() {
+        if (this.status == TourStatus.CLOSED) {
+            this.status = TourStatus.RECRUITING;
+        }
+    }
+
     public Tour(
             Long guideId,
             Long universityId,
