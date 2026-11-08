@@ -96,6 +96,11 @@ public class Coupon {
         return expiresAt.atZone(ZONE).toOffsetDateTime();
     }
 
+    // 사용 시각 (API 응답용, +09:00 포함). 아직 사용하지 않았으면 null.
+    public OffsetDateTime usedAtOffset() {
+        return usedAt == null ? null : usedAt.atZone(ZONE).toOffsetDateTime();
+    }
+
     // 지금 시각 기준의 상태. 탐방 날짜가 지난 발급 쿠폰은 EXPIRED로 본다.
     // 초 단위가 아니라 날짜로 비교해서, 탐방 당일 마지막 1초도 유효하다.
     public CouponStatus statusAt(LocalDateTime now) {

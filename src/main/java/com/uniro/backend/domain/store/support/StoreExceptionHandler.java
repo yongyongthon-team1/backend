@@ -11,10 +11,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-// 상점 컨트롤러에서만 적용되는 요청 형식 오류 처리.
+// 상점·쿠폰 컨트롤러에서만 적용되는 요청 형식 오류 처리.
 // 공통 ApiExceptionHandler는 건드리지 않고, 다른 도메인의 응답에는 영향을 주지 않는다.
 @Slf4j
-@RestControllerAdvice(basePackages = "com.uniro.backend.domain.store")
+@RestControllerAdvice(basePackages = {
+        "com.uniro.backend.domain.store",
+        "com.uniro.backend.domain.coupon"
+})
 public class StoreExceptionHandler {
 
     // 숫자 파라미터(page, size 등)에 숫자가 아닌 값이 올 때

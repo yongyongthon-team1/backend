@@ -3,9 +3,11 @@ package com.uniro.backend.domain.coupon.service;
 import com.uniro.backend.common.ApiException;
 import com.uniro.backend.domain.coupon.dto.CouponCheckResponse;
 import com.uniro.backend.domain.coupon.dto.CouponRedeemResponse;
+import com.uniro.backend.domain.coupon.dto.MyCouponResponse;
 import com.uniro.backend.domain.coupon.entity.Coupon;
 import com.uniro.backend.domain.coupon.entity.CouponStatus;
 import com.uniro.backend.domain.coupon.repository.CouponRepository;
+import com.uniro.backend.domain.coupon.repository.MyCouponRow;
 import com.uniro.backend.domain.store.repository.StoreRepository;
 import com.uniro.backend.domain.store.support.StoreErrors;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 // 사장님이 학생이 보여 준 쿠폰을 확인하고 사용 처리한다
 @Service
@@ -25,6 +28,29 @@ public class CouponService {
 
     private final CouponRepository couponRepository;
     private final StoreRepository storeRepository;
+
+    // 내 쿠폰 조회 (고교생). 유효기간이 지난 발급 쿠폰은 EXPIRED로 내려간다.
+    @Transactional(readOnly = true)
+    public List<MyCouponResponse> myCoupons(Long userId, Long tourId, Long storeId) {
+        LocalDateTime now = LocalDateTime.now(Coupon.ZONE);
+
+        return couponRepository.findMine(userId, tourId, storeId).stream()
+                .map(r -> MyCouponResponse.of(
+                        r.coupon(), r.tourId(), r.storeName(), statusFor(r, now)))
+                .toList();
+    }
+
+    // 승인된 신청이 아니면(취소·거절) 아직 쓰지 않은 쿠폰은 만료로 본다.
+    // 신청 취소 때 쿠폰을 만료 처리하지 못한 경우에도 유효한 쿠폰처럼 보이지 않게 한다.
+    private CouponStatus statusFor(MyCouponRow row, LocalDateTime now) {
+        CouponStatus status = row.coupon().statusAt(now);
+
+        if (status == CouponStatus.ISSUED && !row.applicationApproved()) {
+            return CouponStatus.EXPIRED;
+        }
+
+        return status;
+    }
 
     // 쿠폰 코드 확인. 내 가게의 쿠폰이면 사용·만료 상태여도 정보를 돌려준다.
     @Transactional(readOnly = true)

@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -33,7 +32,7 @@ public class CouponController {
             String authorization,
             @PathVariable String couponCode
     ) {
-        return ok(couponService.check(
+        return CouponResponses.ok("조회 성공", couponService.check(
                 authenticator.requireOwner(authorization).getId(), couponCode));
     }
 
@@ -48,20 +47,7 @@ public class CouponController {
             String authorization,
             @PathVariable String couponCode
     ) {
-        return ok("사용 처리 완료", couponService.redeem(
+        return CouponResponses.ok("사용 처리 완료", couponService.redeem(
                 authenticator.requireOwner(authorization).getId(), couponCode));
-    }
-
-    private ResponseEntity<Map<String, Object>> ok(Object data) {
-        return ok("조회 성공", data);
-    }
-
-    private ResponseEntity<Map<String, Object>> ok(String message, Object data) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("code", "S200");
-        body.put("message", message);
-        body.put("data", data);
-
-        return ResponseEntity.ok(body);
     }
 }

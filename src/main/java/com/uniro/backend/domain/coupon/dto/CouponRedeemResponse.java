@@ -16,7 +16,7 @@ public record CouponRedeemResponse(
         return new CouponRedeemResponse(
                 coupon.getId(),
                 coupon.getStatus(),
-                coupon.getUsedAt().atZone(Coupon.ZONE).toOffsetDateTime()
+                coupon.usedAtOffset()
         );
     }
 }
