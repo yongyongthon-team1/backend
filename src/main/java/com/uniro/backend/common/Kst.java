@@ -1,4 +1,4 @@
-package com.uniro.backend.domain.application.support;
+package com.uniro.backend.common;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
