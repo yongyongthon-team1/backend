@@ -79,4 +79,36 @@ public class StudentVerification {
         this.reviewedAt = null;
         this.reviewedBy = null;
     }
+
+    public void review(
+            VerificationStatus decision,
+            String rejectReason,
+            Long adminId,
+            LocalDateTime reviewedAt
+    ) {
+        if (status != VerificationStatus.PENDING) {
+            throw new IllegalStateException(
+                    "이미 심사가 끝난 요청입니다."
+            );
+        }
+
+        if (decision != VerificationStatus.APPROVED
+                && decision != VerificationStatus.REJECTED) {
+            throw new IllegalArgumentException(
+                    "승인 또는 반려만 가능합니다."
+            );
+        }
+
+        this.status = decision;
+        this.rejectionReason =
+                decision == VerificationStatus.REJECTED
+                        ? rejectReason
+                        : null;
+
+        this.reviewedBy = adminId;
+        this.reviewedAt = reviewedAt;
+
+        // 심사 완료 후 기존 문서 위치를 DB에서 제거
+        this.documentUrl = null;
+    }
 }

@@ -23,4 +23,15 @@ public class BusinessVerification {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public BusinessVerification(Long userId, LocalDateTime now) {
+        this.id = userId;
+        approve(now);
+    }
+
+    public void approve(LocalDateTime now) {
+        this.verified = true;
+        this.verifiedAt = now;
+        this.updatedAt = now;
+    }
 }
