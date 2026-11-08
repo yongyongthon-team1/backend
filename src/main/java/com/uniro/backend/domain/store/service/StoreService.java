@@ -4,6 +4,7 @@ import com.uniro.backend.common.ApiException;
 import com.uniro.backend.domain.store.dto.StoreSearchItemResponse;
 import com.uniro.backend.domain.store.entity.Store;
 import com.uniro.backend.domain.store.repository.StoreRepository;
+import com.uniro.backend.domain.store.support.StoreErrors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,11 +31,11 @@ public class StoreService {
         String trimmed = keyword == null ? "" : keyword.trim();
 
         if (trimmed.length() < 2) {
-            throw ApiException.invalid("keyword", "검색어는 2자 이상 입력해 주세요");
+            throw StoreErrors.invalid("keyword", "검색어는 2자 이상 입력해 주세요");
         }
 
         if (trimmed.length() > MAX_KEYWORD_LENGTH) {
-            throw ApiException.invalid(
+            throw StoreErrors.invalid(
                     "keyword",
                     "검색어는 " + MAX_KEYWORD_LENGTH + "자 이하로 입력해 주세요"
             );
@@ -44,10 +45,10 @@ public class StoreService {
         int pageSize = size == null ? DEFAULT_SIZE : size;
 
         if (pageNo < 1) {
-            throw ApiException.invalid("page", "page는 1 이상이어야 합니다");
+            throw StoreErrors.invalid("page", "page는 1 이상이어야 합니다");
         }
         if (pageSize < 1 || pageSize > MAX_SIZE) {
-            throw ApiException.invalid("size", "size는 1~" + MAX_SIZE + " 사이여야 합니다");
+            throw StoreErrors.invalid("size", "size는 1~" + MAX_SIZE + " 사이여야 합니다");
         }
 
         Page<Store> result = storeRepository.findByNameContaining(

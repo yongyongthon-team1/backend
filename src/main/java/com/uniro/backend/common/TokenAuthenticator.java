@@ -17,12 +17,24 @@ public class TokenAuthenticator {
     private final UserRepository userRepository;
 
     // 토큰이 유효하고 해당 사용자가 아직 존재할 때만 사용자 ID를 돌려준다
+    // (역할이 필요 없는 API용: 사용자 행 전체를 읽지 않고 존재만 확인)
     public Long requireUserId(String authorization) {
-        return requireUser(authorization).getId();
+        Long userId = parseUserId(authorization);
+
+        if (!userRepository.existsById(userId)) {
+            throw unauthorized();
+        }
+
+        return userId;
     }
 
     // 역할(role) 확인이 필요한 API에서 사용자 전체를 돌려준다
     public User requireUser(String authorization) {
+        return userRepository.findById(parseUserId(authorization))
+                .orElseThrow(this::unauthorized);
+    }
+
+    private Long parseUserId(String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             throw unauthorized();
         }
@@ -33,16 +45,11 @@ public class TokenAuthenticator {
             throw unauthorized();
         }
 
-        Long userId;
-
         try {
-            userId = jwtProvider.getUserId(token);
+            return jwtProvider.getUserId(token);
         } catch (JwtException | IllegalArgumentException e) {
             throw unauthorized();
         }
-
-        return userRepository.findById(userId)
-                .orElseThrow(this::unauthorized);
     }
 
     private ApiException unauthorized() {

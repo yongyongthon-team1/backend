@@ -1,6 +1,7 @@
 package com.uniro.backend.domain.store.controller;
 
 import com.uniro.backend.common.TokenAuthenticator;
+import com.uniro.backend.domain.store.dto.PartnershipRequest;
 import com.uniro.backend.domain.store.dto.StoreRegisterRequest;
 import com.uniro.backend.domain.store.dto.StoreUpdateRequest;
 import com.uniro.backend.domain.store.service.MyStoreService;
@@ -74,6 +75,23 @@ public class MyStoreController {
                 authenticator.requireUser(authorization), request);
 
         return response(HttpStatus.OK, "S200", "수정 성공", data);
+    }
+
+    // 제휴 할인 설정
+    @Operation(
+            summary = "제휴 할인 설정",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @PutMapping("/partnership")
+    public ResponseEntity<Map<String, Object>> savePartnership(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @RequestBody PartnershipRequest request
+    ) {
+        var data = myStoreService.savePartnership(
+                authenticator.requireUser(authorization), request);
+
+        return response(HttpStatus.OK, "S200", "저장 성공", data);
     }
 
     private ResponseEntity<Map<String, Object>> response(
