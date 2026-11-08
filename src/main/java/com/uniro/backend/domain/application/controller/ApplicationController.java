@@ -2,6 +2,7 @@ package com.uniro.backend.domain.application.controller;
 
 import com.uniro.backend.common.TokenAuthenticator;
 import com.uniro.backend.domain.application.dto.ApplicationCreateRequest;
+import com.uniro.backend.domain.application.dto.ApplicationDecisionRequest;
 import com.uniro.backend.domain.application.service.ApplicationService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +40,24 @@ public class ApplicationController {
                 authenticator.requireHighSchool(authorization), tourId, request);
 
         return response(HttpStatus.CREATED, "S201", "신청 완료", data);
+    }
+
+    // 신청 승인·거절
+    @Operation(
+            summary = "신청 승인·거절",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @PatchMapping("/applications/{applicationId}/decision")
+    public ResponseEntity<Map<String, Object>> decide(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @PathVariable Long applicationId,
+            @RequestBody ApplicationDecisionRequest request
+    ) {
+        var data = applicationService.decide(
+                authenticator.requireUniversity(authorization), applicationId, request);
+
+        return response(HttpStatus.OK, "S200", "처리 완료", data);
     }
 
     private ResponseEntity<Map<String, Object>> response(

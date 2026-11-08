@@ -45,6 +45,11 @@ public class TokenAuthenticator {
         return requireRole(authorization, UserRole.HIGH_SCHOOL, "고교생만 이용할 수 있습니다");
     }
 
+    // 대학생(가이드)만 쓸 수 있는 API용: 로그인한 사용자가 대학생이 아니면 403
+    public User requireUniversity(String authorization) {
+        return requireRole(authorization, UserRole.UNIVERSITY, "대학생만 이용할 수 있습니다");
+    }
+
     private User requireRole(String authorization, UserRole role, String message) {
         User user = requireUser(authorization);
 

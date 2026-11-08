@@ -6,6 +6,8 @@ import com.uniro.backend.domain.tour.entity.TourApplicationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -38,6 +40,10 @@ public interface TourApplicationRepository
     );
 
     List<TourApplication> findByTourId(Long tourId);
+
+    // 신청이 속한 탐방 ID (탐방 행을 먼저 잠그기 위해 신청 행은 읽지 않고 ID만 본다)
+    @Query("select a.tourId from TourApplication a where a.id = :id")
+    Optional<Long> findTourIdById(@Param("id") Long id);
 
     // 이미 유효한(신청 중·승인) 신청이 있는지
     boolean existsByTourIdAndUserIdAndStatusIn(

@@ -3,6 +3,8 @@ package com.uniro.backend.domain.application.service;
 import com.uniro.backend.common.ApiException;
 import com.uniro.backend.domain.application.dto.ApplicationCreateRequest;
 import com.uniro.backend.domain.application.dto.ApplicationCreateResponse;
+import com.uniro.backend.domain.application.dto.ApplicationDecisionRequest;
+import com.uniro.backend.domain.application.dto.ApplicationDecisionResponse;
 import com.uniro.backend.domain.guardianconsent.repository.GuardianConsentRepository;
 import com.uniro.backend.domain.store.support.StoreErrors;
 import com.uniro.backend.domain.tour.entity.Tour;
@@ -16,9 +18,11 @@ import com.uniro.backend.domain.verification.entity.VerificationStatus;
 import com.uniro.backend.domain.verification.repository.StudentVerificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -38,6 +42,7 @@ public class ApplicationService {
     private final TourApplicationRepository applicationRepository;
     private final StudentVerificationRepository verificationRepository;
     private final GuardianConsentRepository guardianConsentRepository;
+    private final TransactionTemplate transactionTemplate;
 
     // 탐방 신청 (고교생). 재학 인증과 보호자 동의가 끝난 고교생만 신청할 수 있다.
     @Transactional
@@ -49,9 +54,7 @@ public class ApplicationService {
         // 마지막 자리에 두 명이 동시에 신청해도 정원을 넘지 않도록 탐방 행을 잠그고 센다.
         // 잠금은 이 트랜잭션의 첫 DB 작업이어야 한다. 다른 조회가 먼저 있으면 그 시점의 데이터가
         // 읽기 기준이 되어(REPEATABLE READ), 잠금을 기다린 뒤에도 앞 사람의 신청을 세지 못한다.
-        Tour tour = tourRepository.findByIdForUpdate(tourId)
-                .orElseThrow(() -> new ApiException(
-                        HttpStatus.NOT_FOUND, "E404", "존재하지 않는 탐방입니다"));
+        Tour tour = lockTour(tourId);
 
         requireEligible(student);
         requireOpen(tour);
@@ -68,6 +71,96 @@ public class ApplicationService {
             // 같은 사용자가 거의 동시에 두 번 신청한 경우 (tour_id, active_user_id 유니크)
             throw alreadyApplied();
         }
+    }
+
+    // 신청 승인·거절 (해당 탐방의 가이드). 승인 인원이 정원이 되면 탐방을 마감한다.
+    public ApplicationDecisionResponse decide(
+            User guide, Long applicationId, ApplicationDecisionRequest request
+    ) {
+        TourApplicationStatus decision = parseDecision(request.decision());
+
+        // 탐방 행 잠금이 트랜잭션의 첫 DB 작업이 되도록, 탐방 ID는 트랜잭션 밖에서 먼저 찾는다.
+        Long tourId = findTourId(applicationId);
+
+        return transactionTemplate.execute(status ->
+                decideLocked(guide, applicationId, tourId, decision));
+    }
+
+    // 탐방 행을 잠근 상태에서 승인·거절을 처리한다.
+    private ApplicationDecisionResponse decideLocked(
+            User guide, Long applicationId, Long tourId, TourApplicationStatus decision
+    ) {
+        Tour tour = lockTour(tourId);
+
+        if (!tour.getGuideId().equals(guide.getId())) {
+            throw new ApiException(
+                    HttpStatus.FORBIDDEN, "E403", "내 탐방의 신청만 처리할 수 있어요");
+        }
+
+        TourApplication application = applicationRepository.findById(applicationId)
+                .orElseThrow(this::applicationNotFound);
+
+        if (tour.getStatus() != TourStatus.RECRUITING && tour.getStatus() != TourStatus.CLOSED) {
+            throw alreadyProcessed("종료되었거나 취소된 탐방입니다");
+        }
+        if (application.getStatus() != TourApplicationStatus.PENDING) {
+            throw alreadyProcessed("이미 처리된 신청입니다");
+        }
+
+        if (decision == TourApplicationStatus.REJECTED) {
+            application.reject();
+        } else {
+            long approved = applicationRepository.countByTourIdAndStatus(
+                    tourId, TourApplicationStatus.APPROVED);
+            if (approved >= tour.getCapacity()) {
+                throw new ApiException(
+                        HttpStatus.CONFLICT, "E409_TOUR_FULL", "정원이 모두 찼습니다");
+            }
+
+            application.approve();
+            if (approved + 1 >= tour.getCapacity()) {
+                tour.close();
+            }
+        }
+
+        return new ApplicationDecisionResponse(
+                application.getId(), application.getStatus(), tour.getStatus());
+    }
+
+    private ApiException alreadyProcessed(String message) {
+        return new ApiException(HttpStatus.CONFLICT, "E409_ALREADY_PROCESSED", message);
+    }
+
+    private TourApplicationStatus parseDecision(String decision) {
+        if ("APPROVED".equals(decision)) {
+            return TourApplicationStatus.APPROVED;
+        }
+        if ("REJECTED".equals(decision)) {
+            return TourApplicationStatus.REJECTED;
+        }
+
+        throw StoreErrors.invalid("decision", "APPROVED 또는 REJECTED만 가능합니다");
+    }
+
+    private Long findTourId(Long applicationId) {
+        return applicationRepository.findTourIdById(applicationId)
+                .orElseThrow(this::applicationNotFound);
+    }
+
+    private Tour lockTour(Long tourId) {
+        try {
+            return tourRepository.findByIdForUpdate(tourId)
+                    .orElseThrow(() -> new ApiException(
+                            HttpStatus.NOT_FOUND, "E404", "존재하지 않는 탐방입니다"));
+        } catch (PessimisticLockingFailureException e) {
+            // 동시 요청과 겹쳐 잠금 대기 초과나 데드락으로 끊긴 경우
+            throw new ApiException(
+                    HttpStatus.CONFLICT, "E409", "잠시 후 다시 시도해 주세요");
+        }
+    }
+
+    private ApiException applicationNotFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "E404", "존재하지 않는 신청입니다");
     }
 
     // 재학 인증 승인 + 보호자 동의 완료
