@@ -2,6 +2,7 @@ package com.uniro.backend.domain.tour.service;
 
 import com.uniro.backend.common.ApiException;
 import com.uniro.backend.config.JwtProvider;
+import com.uniro.backend.domain.coupon.service.CouponService;
 import com.uniro.backend.domain.tour.entity.Tour;
 import com.uniro.backend.domain.tour.entity.TourApplication;
 import com.uniro.backend.domain.tour.entity.TourStatus;
@@ -32,6 +33,7 @@ public class TourLifecycleService {
     private final UserRepository userRepository;
     private final TourRepository tourRepository;
     private final TourApplicationRepository applicationRepository;
+    private final CouponService couponService;
 
     private static final ZoneId KOREA_ZONE =
             ZoneId.of("Asia/Seoul");
@@ -68,6 +70,10 @@ public class TourLifecycleService {
         for (TourApplication application : applications) {
             application.cancelByTour();
         }
+
+        // 발급된 쿠폰은 만료 처리 (T-05). 이미 사용된 쿠폰은 그대로 둔다.
+        couponService.expireIssuedCoupons(
+                applications.stream().map(TourApplication::getId).toList());
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("tour_id", tour.getId());

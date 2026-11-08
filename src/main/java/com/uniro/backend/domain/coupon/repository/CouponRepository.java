@@ -4,10 +4,12 @@ import com.uniro.backend.domain.coupon.entity.Coupon;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,6 +48,18 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
             @Param("tourId") Long tourId,
             @Param("storeId") Long storeId
     );
+
+    // 주어진 신청들의 아직 쓰지 않은(발급 상태) 쿠폰을 만료로 바꾼다. 이미 사용된 쿠폰은 그대로 둔다.
+    // 호출한 쪽이 이미 읽어 둔 엔티티를 분리시키지 않도록 영속성 컨텍스트는 비우지 않는다.
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            update Coupon c
+            set c.status = com.uniro.backend.domain.coupon.entity.CouponStatus.EXPIRED
+            where c.applicationId in :applicationIds
+              and c.status = com.uniro.backend.domain.coupon.entity.CouponStatus.ISSUED
+            """)
+    int expireIssuedByApplicationIds(
+            @Param("applicationIds") Collection<Long> applicationIds);
 
     // 그 가게에서 이날 이미 사용 처리된 쿠폰이 있는지
     boolean existsByStoreIdAndUsedDate(Long storeId, LocalDate usedDate);

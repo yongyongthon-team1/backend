@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.List;
 
 // 사장님이 학생이 보여 준 쿠폰을 확인하고 사용 처리한다
@@ -38,6 +39,18 @@ public class CouponService {
                 .map(r -> MyCouponResponse.of(
                         r.coupon(), r.tourId(), r.storeName(), statusFor(r, now)))
                 .toList();
+    }
+
+    // 신청이 취소될 때 호출한다 (탐방 취소 T-05, 신청 취소 A-03).
+    // 주어진 신청들의 아직 쓰지 않은 쿠폰을 만료로 바꾸고, 바뀐 쿠폰 수를 돌려준다.
+    // 호출한 쪽의 트랜잭션에 참여하므로, 신청 취소와 함께 커밋되거나 함께 되돌아간다.
+    @Transactional
+    public int expireIssuedCoupons(Collection<Long> applicationIds) {
+        if (applicationIds == null || applicationIds.isEmpty()) {
+            return 0;
+        }
+
+        return couponRepository.expireIssuedByApplicationIds(applicationIds);
     }
 
     // 승인된 신청이 아니면(취소·거절) 아직 쓰지 않은 쿠폰은 만료로 본다.
