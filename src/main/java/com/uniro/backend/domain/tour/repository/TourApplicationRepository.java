@@ -38,4 +38,11 @@ public interface TourApplicationRepository
     );
 
     List<TourApplication> findByTourId(Long tourId);
+
+    // 이미 유효한(신청 중·승인) 신청이 있는지
+    boolean existsByTourIdAndUserIdAndStatusIn(
+            Long tourId,
+            Long userId,
+            Collection<TourApplicationStatus> statuses
+    );
 }
