@@ -46,4 +46,10 @@ public class TourApplication {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    public void cancelByTour() {
+        this.status = TourApplicationStatus.CANCELED;
+        this.activeUserId = null;
+        this.updatedAt = LocalDateTime.now();
+    }
 }
