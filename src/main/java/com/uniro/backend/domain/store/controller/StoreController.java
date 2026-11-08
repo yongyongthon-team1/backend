@@ -22,6 +22,23 @@ public class StoreController {
     private final StoreService storeService;
     private final TokenAuthenticator authenticator;
 
+    // 주변 상점 조회
+    @Operation(
+            summary = "주변 상점 조회",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @GetMapping("/nearby")
+    public ResponseEntity<Map<String, Object>> nearby(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @RequestParam(name = "campus_id", required = false) Long campusId,
+            @RequestParam(required = false) String category
+    ) {
+        authenticator.requireUserId(authorization);
+
+        return ok(Map.of("items", storeService.nearby(campusId, category)));
+    }
+
     // 상점 검색
     @Operation(
             summary = "상점 검색",
@@ -37,10 +54,14 @@ public class StoreController {
     ) {
         authenticator.requireUserId(authorization);
 
+        return ok(storeService.search(keyword, page, size));
+    }
+
+    private ResponseEntity<Map<String, Object>> ok(Object data) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("code", "S200");
         body.put("message", "조회 성공");
-        body.put("data", storeService.search(keyword, page, size));
+        body.put("data", data);
 
         return ResponseEntity.ok(body);
     }

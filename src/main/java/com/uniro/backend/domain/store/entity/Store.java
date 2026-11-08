@@ -15,6 +15,11 @@ import java.time.LocalDateTime;
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_stores_name_address",
                 columnNames = {"name", "address"}
+        ),
+        // 주변 상점 조회의 좌표 범위 검색용
+        indexes = @Index(
+                name = "idx_stores_lat_lng",
+                columnList = "latitude, longitude"
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

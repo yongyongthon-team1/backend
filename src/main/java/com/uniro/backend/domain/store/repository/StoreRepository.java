@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 public interface StoreRepository extends JpaRepository<Store, Long> {
@@ -25,6 +27,21 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Store s where s.id = :id")
     Optional<Store> findByIdForUpdate(@Param("id") Long id);
+
+    // 좌표 범위(사각형) 안의 상점. 업종이 null이면 전체. 정확한 거리는 서비스에서 거른다.
+    @Query("""
+            select s from Store s
+            where s.latitude between :minLat and :maxLat
+              and s.longitude between :minLng and :maxLng
+              and (:category is null or s.category = :category)
+            """)
+    List<Store> findInBox(
+            @Param("minLat") BigDecimal minLat,
+            @Param("maxLat") BigDecimal maxLat,
+            @Param("minLng") BigDecimal minLng,
+            @Param("maxLng") BigDecimal maxLng,
+            @Param("category") String category
+    );
 
     // 상호 부분 일치 검색 (%, _ 는 Spring Data가 이스케이프하고,
     // MySQL 기본 collation이 대소문자를 구분하지 않으므로 IgnoreCase는 쓰지 않는다)
