@@ -4,7 +4,9 @@ package com.uniro.backend.domain.store.support;
 public final class Geo {
 
     private static final double EARTH_RADIUS_M = 6_371_000;
-    private static final double METERS_PER_DEGREE_LAT = 111_320;
+    // 거리 계산(Haversine)과 같은 지구 반지름에서 구한다. 값이 다르면 사각형이 반경 원보다 좁아져
+    // 경계 근처의 상점이 사각형 조회에서 빠진다.
+    private static final double METERS_PER_DEGREE_LAT = Math.PI * EARTH_RADIUS_M / 180;
 
     private Geo() {
     }
