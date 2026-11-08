@@ -1,10 +1,12 @@
 package com.uniro.backend.domain.application.service;
 
 import com.uniro.backend.common.ApiException;
+import com.uniro.backend.domain.application.dto.ApplicationCancelResponse;
 import com.uniro.backend.domain.application.dto.ApplicationCreateRequest;
 import com.uniro.backend.domain.application.dto.ApplicationCreateResponse;
 import com.uniro.backend.domain.application.dto.ApplicationDecisionRequest;
 import com.uniro.backend.domain.application.dto.ApplicationDecisionResponse;
+import com.uniro.backend.domain.coupon.service.CouponService;
 import com.uniro.backend.domain.guardianconsent.repository.GuardianConsentRepository;
 import com.uniro.backend.domain.store.support.StoreErrors;
 import com.uniro.backend.domain.tour.entity.Tour;
@@ -12,6 +14,7 @@ import com.uniro.backend.domain.tour.entity.TourApplication;
 import com.uniro.backend.domain.tour.entity.TourApplicationStatus;
 import com.uniro.backend.domain.tour.entity.TourStatus;
 import com.uniro.backend.domain.tour.repository.TourApplicationRepository;
+import com.uniro.backend.domain.tour.repository.TourApplicationRepository.ApplicationRef;
 import com.uniro.backend.domain.tour.repository.TourRepository;
 import com.uniro.backend.domain.user.entity.User;
 import com.uniro.backend.domain.verification.entity.VerificationStatus;
@@ -24,6 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 // 탐방 신청
@@ -31,6 +36,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApplicationService {
 
+    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
     private static final int WISH_MAX = 100;
     private static final String CONSENT_AGREED = "AGREED";
 
@@ -42,6 +48,7 @@ public class ApplicationService {
     private final TourApplicationRepository applicationRepository;
     private final StudentVerificationRepository verificationRepository;
     private final GuardianConsentRepository guardianConsentRepository;
+    private final CouponService couponService;
     private final TransactionTemplate transactionTemplate;
 
     // 탐방 신청 (고교생). 재학 인증과 보호자 동의가 끝난 고교생만 신청할 수 있다.
@@ -79,28 +86,27 @@ public class ApplicationService {
     ) {
         TourApplicationStatus decision = parseDecision(request.decision());
 
-        // 탐방 행 잠금이 트랜잭션의 첫 DB 작업이 되도록, 탐방 ID는 트랜잭션 밖에서 먼저 찾는다.
-        Long tourId = findTourId(applicationId);
-
-        return transactionTemplate.execute(status ->
-                decideLocked(guide, applicationId, tourId, decision));
-    }
-
-    // 탐방 행을 잠근 상태에서 승인·거절을 처리한다.
-    private ApplicationDecisionResponse decideLocked(
-            User guide, Long applicationId, Long tourId, TourApplicationStatus decision
-    ) {
-        Tour tour = lockTour(tourId);
-
-        if (!tour.getGuideId().equals(guide.getId())) {
+        // 탐방 행 잠금이 트랜잭션의 첫 DB 작업이 되도록, 탐방 ID와 권한은 트랜잭션 밖에서 먼저 확인한다.
+        // (권한 없는 요청이 탐방 행 잠금을 잡고 다른 신청을 막지 못하게 하는 효과도 있다.)
+        ApplicationRef ref = findRef(applicationId);
+        if (!ref.guideId().equals(guide.getId())) {
             throw new ApiException(
                     HttpStatus.FORBIDDEN, "E403", "내 탐방의 신청만 처리할 수 있어요");
         }
 
+        return transactionTemplate.execute(status ->
+                decideLocked(applicationId, ref.tourId(), decision));
+    }
+
+    // 탐방 행을 잠근 상태에서 승인·거절을 처리한다.
+    private ApplicationDecisionResponse decideLocked(
+            Long applicationId, Long tourId, TourApplicationStatus decision
+    ) {
+        Tour tour = lockTour(tourId);
         TourApplication application = applicationRepository.findById(applicationId)
                 .orElseThrow(this::applicationNotFound);
 
-        if (tour.getStatus() != TourStatus.RECRUITING && tour.getStatus() != TourStatus.CLOSED) {
+        if (!isOpen(tour)) {
             throw alreadyProcessed("종료되었거나 취소된 탐방입니다");
         }
         if (application.getStatus() != TourApplicationStatus.PENDING) {
@@ -131,6 +137,44 @@ public class ApplicationService {
         return new ApiException(HttpStatus.CONFLICT, "E409_ALREADY_PROCESSED", message);
     }
 
+    // 신청 취소 (신청한 고교생). 승인됐던 신청이면 자리를 돌려주고, 이미 발급된 쿠폰은 만료시킨다.
+    public ApplicationCancelResponse cancel(User student, Long applicationId) {
+        // decide()와 같은 이유로 탐방 ID와 권한을 트랜잭션 밖에서 먼저 확인한다.
+        ApplicationRef ref = findRef(applicationId);
+        if (!ref.applicantId().equals(student.getId())) {
+            throw new ApiException(
+                    HttpStatus.FORBIDDEN, "E403", "내 신청만 취소할 수 있어요");
+        }
+
+        return transactionTemplate.execute(status ->
+                cancelLocked(applicationId, ref.tourId()));
+    }
+
+    private ApplicationCancelResponse cancelLocked(Long applicationId, Long tourId) {
+        Tour tour = lockTour(tourId);
+
+        TourApplication application = applicationRepository.findById(applicationId)
+                .orElseThrow(this::applicationNotFound);
+
+        if (!isOpen(tour) || !ACTIVE.contains(application.getStatus())) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT, "E409_INVALID_APPLICATION_STATUS", "취소할 수 없는 신청입니다");
+        }
+
+        boolean wasApproved = application.getStatus() == TourApplicationStatus.APPROVED;
+        application.cancel();
+
+        if (wasApproved) {
+            // 이미 시작한 탐방은 자리가 나도 다시 모집하지 않는다
+            if (tour.getStartsAt().isAfter(LocalDateTime.now(ZONE))) {
+                tour.reopen();
+            }
+            couponService.expireIssuedCoupons(List.of(applicationId));
+        }
+
+        return new ApplicationCancelResponse(application.getId(), application.getStatus());
+    }
+
     private TourApplicationStatus parseDecision(String decision) {
         if ("APPROVED".equals(decision)) {
             return TourApplicationStatus.APPROVED;
@@ -142,9 +186,15 @@ public class ApplicationService {
         throw StoreErrors.invalid("decision", "APPROVED 또는 REJECTED만 가능합니다");
     }
 
-    private Long findTourId(Long applicationId) {
-        return applicationRepository.findTourIdById(applicationId)
+    private ApplicationRef findRef(Long applicationId) {
+        return applicationRepository.findRefById(applicationId)
                 .orElseThrow(this::applicationNotFound);
+    }
+
+    // 모집 중이거나 정원이 차서 마감된 탐방만 신청을 처리할 수 있다 (취소·완료된 탐방은 불가)
+    private boolean isOpen(Tour tour) {
+        return tour.getStatus() == TourStatus.RECRUITING
+                || tour.getStatus() == TourStatus.CLOSED;
     }
 
     private Tour lockTour(Long tourId) {

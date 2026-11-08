@@ -41,9 +41,15 @@ public interface TourApplicationRepository
 
     List<TourApplication> findByTourId(Long tourId);
 
-    // 신청이 속한 탐방 ID (탐방 행을 먼저 잠그기 위해 신청 행은 읽지 않고 ID만 본다)
-    @Query("select a.tourId from TourApplication a where a.id = :id")
-    Optional<Long> findTourIdById(@Param("id") Long id);
+    // 신청의 주인(신청자)과 탐방·가이드. 탐방 행을 먼저 잠그고 권한은 잠그기 전에 확인하기 위해,
+    // 신청 행 전체가 아니라 바뀌지 않는 값만 잠금 없이 읽는다.
+    @Query("select new com.uniro.backend.domain.tour.repository.TourApplicationRepository$ApplicationRef("
+            + "a.tourId, a.userId, t.guideId) "
+            + "from TourApplication a join Tour t on t.id = a.tourId where a.id = :id")
+    Optional<ApplicationRef> findRefById(@Param("id") Long id);
+
+    record ApplicationRef(Long tourId, Long applicantId, Long guideId) {
+    }
 
     // 이미 유효한(신청 중·승인) 신청이 있는지
     boolean existsByTourIdAndUserIdAndStatusIn(

@@ -60,6 +60,23 @@ public class ApplicationController {
         return response(HttpStatus.OK, "S200", "처리 완료", data);
     }
 
+    // 신청 취소
+    @Operation(
+            summary = "신청 취소",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @PostMapping("/applications/{applicationId}/cancel")
+    public ResponseEntity<Map<String, Object>> cancel(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @PathVariable Long applicationId
+    ) {
+        var data = applicationService.cancel(
+                authenticator.requireHighSchool(authorization), applicationId);
+
+        return response(HttpStatus.OK, "S200", "신청 취소 완료", data);
+    }
+
     private ResponseEntity<Map<String, Object>> response(
             HttpStatus status, String code, String message, Object data
     ) {
