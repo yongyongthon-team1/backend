@@ -66,6 +66,10 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
     @Query("select c.code from Coupon c where c.code in :codes")
     List<String> findExistingCodes(@Param("codes") Collection<String> codes);
 
+    // 기간 안(양 끝 포함)에 그 가게에서 사용 처리된 쿠폰 수. 하루에 한 장만 사용되므로 방문한 날 수와 같다.
+    long countByStoreIdAndStatusAndUsedDateBetween(
+            Long storeId, CouponStatus status, LocalDate from, LocalDate to);
+
     // 그 가게에서 이날 이미 사용 처리된 쿠폰이 있는지
     boolean existsByStoreIdAndUsedDate(Long storeId, LocalDate usedDate);
 

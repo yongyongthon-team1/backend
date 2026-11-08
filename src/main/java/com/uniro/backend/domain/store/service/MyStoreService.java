@@ -30,10 +30,6 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 public class MyStoreService {
 
-    // 제휴 기간으로 받는 날짜의 허용 범위
-    private static final LocalDate MIN_DATE = LocalDate.of(2000, 1, 1);
-    private static final LocalDate MAX_DATE = LocalDate.of(2100, 12, 31);
-
     private final StoreRepository storeRepository;
     private final StorePartnershipRepository partnershipRepository;
     private final BusinessVerificationRepository businessVerificationRepository;
@@ -122,8 +118,8 @@ public class MyStoreService {
         if (request.endDate() == null) {
             throw StoreErrors.invalid("end_date", "필수 값입니다");
         }
-        requireReasonableDate("start_date", request.startDate());
-        requireReasonableDate("end_date", request.endDate());
+        StoreErrors.requireReasonableDate("start_date", request.startDate());
+        StoreErrors.requireReasonableDate("end_date", request.endDate());
 
         if (request.endDate().isBefore(request.startDate())) {
             throw StoreErrors.invalid("end_date", "시작일과 같거나 이후여야 합니다");
@@ -228,14 +224,6 @@ public class MyStoreService {
         }
 
         return trimmed;
-    }
-
-    // DB DATE 범위를 벗어나는 비정상 날짜를 400으로 막는다
-    private void requireReasonableDate(String field, LocalDate value) {
-        if (value.isBefore(MIN_DATE) || value.isAfter(MAX_DATE)) {
-            throw StoreErrors.invalid(
-                    field, MIN_DATE.getYear() + "~" + MAX_DATE.getYear() + "년 사이여야 합니다");
-        }
     }
 
     private BigDecimal range(String field, BigDecimal value, int limit) {

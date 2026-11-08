@@ -90,7 +90,7 @@ public class ReviewService {
         String summary = summaryRepository.findByStoreId(storeId)
                 .map(StoreReviewSummary::getSummary)
                 .orElse(null);
-        double average = stats.average() == null ? 0.0 : Math.round(stats.average() * 10) / 10.0;
+        double average = stats.roundedAverage();
 
         return new ReviewListResponse(
                 summary,
