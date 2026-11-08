@@ -37,10 +37,29 @@ public class CouponController {
                 authenticator.requireOwner(authorization).getId(), couponCode));
     }
 
+    // 쿠폰 사용 처리
+    @Operation(
+            summary = "쿠폰 사용 처리",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @PostMapping("/{couponCode}/redeem")
+    public ResponseEntity<Map<String, Object>> redeem(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @PathVariable String couponCode
+    ) {
+        return ok("사용 처리 완료", couponService.redeem(
+                authenticator.requireOwner(authorization).getId(), couponCode));
+    }
+
     private ResponseEntity<Map<String, Object>> ok(Object data) {
+        return ok("조회 성공", data);
+    }
+
+    private ResponseEntity<Map<String, Object>> ok(String message, Object data) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("code", "S200");
-        body.put("message", "조회 성공");
+        body.put("message", message);
         body.put("data", data);
 
         return ResponseEntity.ok(body);
