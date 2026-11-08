@@ -66,6 +66,7 @@ public class UserService {
         String verificationStatus = VerificationStatus.NONE.name();
         String rejectReason = null;
         String schoolName = null;
+        Long universityId = null;
         Integer grade = null;
         String interestMajor = null;
         String guardianConsentStatus = null;
@@ -85,6 +86,21 @@ public class UserService {
 
                 if (v.getStatus() == VerificationStatus.REJECTED) {
                     rejectReason = v.getRejectionReason();
+                }
+
+                // 대학생의 인증된 대학교 정보
+                if (user.getRole() == UserRole.UNIVERSITY) {
+                    universityId = v.getUniversityId();
+
+                    if (universityId != null) {
+                        schoolName = universityRepository
+                                .findById(universityId)
+                                .map(university ->
+                                        university.getName() + " " +
+                                                university.getCampusName()
+                                )
+                                .orElse(null);
+                    }
                 }
             }
         }
@@ -111,23 +127,9 @@ public class UserService {
         // 6. 대학생 정보
         if (user.getRole() == UserRole.UNIVERSITY) {
 
-            var profile = guideProfileRepository.findById(userId);
-
-            if (profile.isPresent()) {
-                GuideProfile p = profile.get();
-
-                guideProfile = GuideProfileResponse.from(p);
-
-                if (p.getUniversityId() != null) {
-                    schoolName = universityRepository
-                            .findById(p.getUniversityId())
-                            .map(university ->
-                                    university.getName() + " " +
-                                            university.getCampusName()
-                            )
-                            .orElse(null);
-                }
-            }
+            guideProfile = guideProfileRepository.findById(userId)
+                    .map(GuideProfileResponse::from)
+                    .orElse(null);
         }
 
         // 7. 사장님 인증 상태
@@ -152,6 +154,7 @@ public class UserService {
                 verificationStatus,
                 rejectReason,
                 schoolName,
+                universityId,
                 grade,
                 interestMajor,
                 guardianConsentStatus,
