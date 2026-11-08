@@ -64,6 +64,14 @@ public class Tour {
         updatedAt = LocalDateTime.now();
     }
 
+    public void cancel() {
+        this.status = TourStatus.CANCELED;
+    }
+
+    public void complete() {
+        this.status = TourStatus.COMPLETED;
+    }
+
     public Tour(
             Long guideId,
             Long universityId,
