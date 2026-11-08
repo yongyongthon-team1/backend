@@ -1,11 +1,13 @@
 package com.uniro.backend.domain.application.service;
 
 import com.uniro.backend.common.ApiException;
+import com.uniro.backend.domain.application.dto.ApplicantListResponse;
 import com.uniro.backend.domain.application.dto.ApplicationCancelResponse;
 import com.uniro.backend.domain.application.dto.ApplicationCreateRequest;
 import com.uniro.backend.domain.application.dto.ApplicationCreateResponse;
 import com.uniro.backend.domain.application.dto.ApplicationDecisionRequest;
 import com.uniro.backend.domain.application.dto.ApplicationDecisionResponse;
+import com.uniro.backend.domain.application.support.Kst;
 import com.uniro.backend.domain.coupon.service.CouponService;
 import com.uniro.backend.domain.guardianconsent.repository.GuardianConsentRepository;
 import com.uniro.backend.domain.store.support.StoreErrors;
@@ -27,8 +29,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 
 // 탐방 신청
@@ -36,7 +36,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApplicationService {
 
-    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
     private static final int WISH_MAX = 100;
     private static final String CONSENT_AGREED = "AGREED";
 
@@ -78,6 +77,21 @@ public class ApplicationService {
             // 같은 사용자가 거의 동시에 두 번 신청한 경우 (tour_id, active_user_id 유니크)
             throw alreadyApplied();
         }
+    }
+
+    // 신청자 목록 (해당 탐방의 가이드). 신청 시각이 빠른 순이고, status로 거를 수 있다.
+    @Transactional(readOnly = true)
+    public ApplicantListResponse applicants(
+            User guide, Long tourId, TourApplicationStatus status
+    ) {
+        Tour tour = tourRepository.findById(tourId).orElseThrow(this::tourNotFound);
+
+        if (!tour.getGuideId().equals(guide.getId())) {
+            throw new ApiException(
+                    HttpStatus.FORBIDDEN, "E403", "내 탐방의 신청자만 볼 수 있어요");
+        }
+
+        return ApplicantListResponse.of(applicationRepository.findApplicants(tourId, status));
     }
 
     // 신청 승인·거절 (해당 탐방의 가이드). 승인 인원이 정원이 되면 탐방을 마감한다.
@@ -166,7 +180,7 @@ public class ApplicationService {
 
         if (wasApproved) {
             // 이미 시작한 탐방은 자리가 나도 다시 모집하지 않는다
-            if (tour.getStartsAt().isAfter(LocalDateTime.now(ZONE))) {
+            if (tour.getStartsAt().isAfter(Kst.now())) {
                 tour.reopen();
             }
             couponService.expireIssuedCoupons(List.of(applicationId));
@@ -199,14 +213,16 @@ public class ApplicationService {
 
     private Tour lockTour(Long tourId) {
         try {
-            return tourRepository.findByIdForUpdate(tourId)
-                    .orElseThrow(() -> new ApiException(
-                            HttpStatus.NOT_FOUND, "E404", "존재하지 않는 탐방입니다"));
+            return tourRepository.findByIdForUpdate(tourId).orElseThrow(this::tourNotFound);
         } catch (PessimisticLockingFailureException e) {
             // 동시 요청과 겹쳐 잠금 대기 초과나 데드락으로 끊긴 경우
             throw new ApiException(
                     HttpStatus.CONFLICT, "E409", "잠시 후 다시 시도해 주세요");
         }
+    }
+
+    private ApiException tourNotFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "E404", "존재하지 않는 탐방입니다");
     }
 
     private ApiException applicationNotFound() {

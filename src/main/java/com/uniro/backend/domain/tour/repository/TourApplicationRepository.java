@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -49,6 +50,26 @@ public interface TourApplicationRepository
     Optional<ApplicationRef> findRefById(@Param("id") Long id);
 
     record ApplicationRef(Long tourId, Long applicantId, Long guideId) {
+    }
+
+    // 탐방의 신청자 목록 (신청 시각이 빠른 순). status가 null이면 전체.
+    // 학년은 프로필이 없으면 null이다.
+    @Query("select new com.uniro.backend.domain.tour.repository.TourApplicationRepository$ApplicantRow("
+            + "a.id, u.name, p.grade, a.motivation, a.status, a.createdAt) "
+            + "from TourApplication a "
+            + "join User u on u.id = a.userId "
+            + "left join StudentProfile p on p.id = a.userId "
+            + "where a.tourId = :tourId and (:status is null or a.status = :status) "
+            + "order by a.createdAt asc, a.id asc")
+    List<ApplicantRow> findApplicants(
+            @Param("tourId") Long tourId,
+            @Param("status") TourApplicationStatus status
+    );
+
+    record ApplicantRow(
+            Long applicationId, String name, Integer grade, String wish,
+            TourApplicationStatus status, LocalDateTime createdAt
+    ) {
     }
 
     // 이미 유효한(신청 중·승인) 신청이 있는지

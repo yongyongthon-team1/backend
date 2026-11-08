@@ -4,6 +4,7 @@ import com.uniro.backend.common.TokenAuthenticator;
 import com.uniro.backend.domain.application.dto.ApplicationCreateRequest;
 import com.uniro.backend.domain.application.dto.ApplicationDecisionRequest;
 import com.uniro.backend.domain.application.service.ApplicationService;
+import com.uniro.backend.domain.tour.entity.TourApplicationStatus;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -75,6 +76,24 @@ public class ApplicationController {
                 authenticator.requireHighSchool(authorization), applicationId);
 
         return response(HttpStatus.OK, "S200", "신청 취소 완료", data);
+    }
+
+    // 신청자 목록
+    @Operation(
+            summary = "신청자 목록 조회",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @GetMapping("/tours/{tourId}/applications")
+    public ResponseEntity<Map<String, Object>> applicants(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @PathVariable Long tourId,
+            @RequestParam(required = false) TourApplicationStatus status
+    ) {
+        var data = applicationService.applicants(
+                authenticator.requireUniversity(authorization), tourId, status);
+
+        return response(HttpStatus.OK, "S200", "조회 성공", data);
     }
 
     private ResponseEntity<Map<String, Object>> response(
