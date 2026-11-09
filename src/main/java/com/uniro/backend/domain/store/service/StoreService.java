@@ -117,40 +117,10 @@ public class StoreService {
             throw StoreErrors.invalid("campus_id", "필수 값입니다");
         }
 
-        University campus = universityRepository.findById(campusId)
-                .orElseThrow(() -> new ApiException(
-                        HttpStatus.NOT_FOUND, "E404", "존재하지 않는 캠퍼스입니다"));
-
         String categoryFilter =
                 category == null || category.isBlank() ? null : category.trim();
 
-        Geo.Origin origin = Geo.origin(
-                campus.getLatitude().doubleValue(),
-                campus.getLongitude().doubleValue()
-        );
-
-        // 반경을 감싸는 사각형으로 먼저 줄이고, 정확한 거리는 아래에서 거른다
-        Geo.Box box = origin.box(radiusMeters);
-
-        List<Store> inBox = storeRepository.findInBox(
-                BigDecimal.valueOf(box.minLat()),
-                BigDecimal.valueOf(box.maxLat()),
-                BigDecimal.valueOf(box.minLng()),
-                BigDecimal.valueOf(box.maxLng()),
-                categoryFilter
-        );
-
-        // 거리는 상점마다 한 번만 계산하고, 가까운 순으로 정렬한 뒤 상점만 남긴다
-        List<Store> stores = inBox.stream()
-                .map(s -> new StoreDistance(s, origin.distanceTo(
-                        s.getLatitude().doubleValue(),
-                        s.getLongitude().doubleValue())))
-                .filter(d -> d.meters() <= radiusMeters)
-                .sorted(Comparator
-                        .comparingDouble(StoreDistance::meters)
-                        .thenComparingLong(d -> d.store().getId()))
-                .map(StoreDistance::store)
-                .toList();
+        List<Store> stores = nearbyStores(campusId, categoryFilter);
 
         if (stores.isEmpty()) {
             return List.of();
@@ -169,6 +139,41 @@ public class StoreService {
         return stores.stream()
                 .map(s -> NearbyStoreResponse.of(
                         s, partnerIds.contains(s.getId()), summaries.get(s.getId())))
+                .toList();
+    }
+
+    // 캠퍼스 주변 반경 안의 상점을 가까운 순으로 돌려준다. category가 null이면 전체 업종.
+    public List<Store> nearbyStores(Long campusId, String categoryFilter) {
+        University campus = universityRepository.findById(campusId)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND, "E404", "존재하지 않는 캠퍼스입니다"));
+
+        Geo.Origin origin = Geo.origin(
+                campus.getLatitude().doubleValue(),
+                campus.getLongitude().doubleValue()
+        );
+
+        // 반경을 감싸는 사각형으로 먼저 줄이고, 정확한 거리는 아래에서 거른다
+        Geo.Box box = origin.box(radiusMeters);
+
+        List<Store> inBox = storeRepository.findInBox(
+                BigDecimal.valueOf(box.minLat()),
+                BigDecimal.valueOf(box.maxLat()),
+                BigDecimal.valueOf(box.minLng()),
+                BigDecimal.valueOf(box.maxLng()),
+                categoryFilter
+        );
+
+        // 거리는 상점마다 한 번만 계산하고, 가까운 순으로 정렬한 뒤 상점만 남긴다
+        return inBox.stream()
+                .map(s -> new StoreDistance(s, origin.distanceTo(
+                        s.getLatitude().doubleValue(),
+                        s.getLongitude().doubleValue())))
+                .filter(d -> d.meters() <= radiusMeters)
+                .sorted(Comparator
+                        .comparingDouble(StoreDistance::meters)
+                        .thenComparingLong(d -> d.store().getId()))
+                .map(StoreDistance::store)
                 .toList();
     }
 
