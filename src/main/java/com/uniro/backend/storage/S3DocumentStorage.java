@@ -10,8 +10,12 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
 
 @Component
@@ -19,6 +23,7 @@ import java.util.UUID;
 public class S3DocumentStorage {
 
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
 
     @Value("${aws.s3.bucket}")
     private String bucket;
@@ -65,14 +70,51 @@ public class S3DocumentStorage {
             throw e;
         }
 
-        // 공개 HTTP URL이 아닌 내부 객체 위치
         return "s3://" + bucket + "/" + key;
+    }
+
+    public String generatePresignedUrl(String documentUrl) {
+
+        String key = extractKey(documentUrl);
+
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .build();
+
+        GetObjectPresignRequest presignRequest =
+                GetObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofMinutes(5))
+                        .getObjectRequest(getObjectRequest)
+                        .build();
+
+        return s3Presigner.presignGetObject(presignRequest)
+                .url()
+                .toString();
     }
 
     public void delete(String documentUrl) {
 
         if (documentUrl == null || documentUrl.isBlank()) {
             return;
+        }
+
+        String key = extractKey(documentUrl);
+
+        s3Client.deleteObject(
+                DeleteObjectRequest.builder()
+                        .bucket(bucket)
+                        .key(key)
+                        .build()
+        );
+    }
+
+    private String extractKey(String documentUrl) {
+
+        if (documentUrl == null || documentUrl.isBlank()) {
+            throw new IllegalArgumentException(
+                    "인증 문서 경로가 없습니다."
+            );
         }
 
         String prefix = "s3://" + bucket + "/";
@@ -91,11 +133,6 @@ public class S3DocumentStorage {
             );
         }
 
-        s3Client.deleteObject(
-                DeleteObjectRequest.builder()
-                        .bucket(bucket)
-                        .key(key)
-                        .build()
-        );
+        return key;
     }
 }
