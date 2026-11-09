@@ -57,3 +57,11 @@ nts:
   business:
     base-url: https://api.odcloud.kr/api/nts-businessman/v1
     service-key: ${NTS_API_SERVICE_KEY}
+
+ai:
+  gemini:
+    # 키가 없으면 AI 없이 대신하는 동작을 쓴다 (키는 .env나 실행 설정의 환경변수로만 넣는다)
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
+    base-url: https://generativelanguage.googleapis.com/v1beta
+    timeout-seconds: 15
