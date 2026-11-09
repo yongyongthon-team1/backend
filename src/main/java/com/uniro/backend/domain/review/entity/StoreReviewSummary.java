@@ -1,5 +1,6 @@
 package com.uniro.backend.domain.review.entity;
 
+import com.uniro.backend.common.Kst;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -7,7 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-// 상점 리뷰 AI 요약 (상점당 하나). 요약을 만드는 기능(R-03)이 생기기 전에는 비어 있다.
+// 상점 리뷰 AI 요약 (상점당 하나). 리뷰가 충분히 쌓이면 ReviewSummaryService가 만들고 다시 만든다.
 @Entity
 @Getter
 @Table(
@@ -33,4 +34,16 @@ public class StoreReviewSummary {
 
     @Column(name = "generated_at", nullable = false)
     private LocalDateTime generatedAt;
+
+    public StoreReviewSummary(Long storeId, String summary, int reviewCount) {
+        this.storeId = storeId;
+        refresh(summary, reviewCount);
+    }
+
+    // 새로 만든 요약으로 바꾼다
+    public void refresh(String summary, int reviewCount) {
+        this.summary = summary;
+        this.reviewCount = reviewCount;
+        this.generatedAt = Kst.nowToSeconds();
+    }
 }

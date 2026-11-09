@@ -16,6 +16,8 @@ import com.uniro.backend.domain.store.repository.StoreRepository;
 import com.uniro.backend.domain.store.support.StoreErrors;
 import com.uniro.backend.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import com.uniro.backend.domain.review.event.ReviewCreatedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -34,6 +36,7 @@ public class ReviewService {
     private final CouponRepository couponRepository;
     private final StoreReviewRepository reviewRepository;
     private final StoreReviewSummaryRepository summaryRepository;
+    private final ApplicationEventPublisher events;
 
     // 리뷰 작성 (고교생). 쿠폰을 사용 처리한 상점에만, 쿠폰 한 장에 한 번 쓸 수 있다.
     @Transactional
@@ -60,8 +63,13 @@ public class ReviewService {
         }
 
         try {
-            return ReviewCreateResponse.of(reviewRepository.saveAndFlush(new StoreReview(
-                    student.getId(), target.tourId(), storeId, couponId, rating, content)));
+            StoreReview saved = reviewRepository.saveAndFlush(new StoreReview(
+                    student.getId(), target.tourId(), storeId, couponId, rating, content));
+
+            // 커밋된 뒤에 요약을 갱신한다(응답과 별개)
+            events.publishEvent(new ReviewCreatedEvent(storeId));
+
+            return ReviewCreateResponse.of(saved);
         } catch (DataIntegrityViolationException e) {
             // 같은 쿠폰으로 거의 동시에 두 번 쓴 경우 (쿠폰·사용자·탐방·상점 유니크)
             throw alreadyReviewed();

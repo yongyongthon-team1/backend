@@ -75,7 +75,7 @@ public class Tour {
     // 모집 중이거나 정원이 차서 마감된 탐방이다 (취소·완료된 탐방은 아니다).
     // 이런 탐방만 신청 처리와 코스 작성이 가능하다.
     public boolean isOpen() {
-        return status == TourStatus.RECRUITING || status == TourStatus.CLOSED;
+        return status.isOpen();
     }
 
     // 정원이 차서 모집을 마감 (모집 중일 때만)

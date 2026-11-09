@@ -2,6 +2,7 @@ package com.uniro.backend.domain.course.controller;
 
 import com.uniro.backend.common.TokenAuthenticator;
 import com.uniro.backend.domain.course.dto.CourseSpotsRequest;
+import com.uniro.backend.domain.course.service.CourseDraftService;
 import com.uniro.backend.domain.course.service.CourseService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class CourseController {
 
     private final CourseService courseService;
+    private final CourseDraftService draftService;
     private final TokenAuthenticator authenticator;
 
     // 코스 조회 (지도)
@@ -37,6 +39,22 @@ public class CourseController {
         var data = courseService.view(authenticator.requireUser(authorization), tourId);
 
         return response(HttpStatus.OK, "S200", "조회 성공", data);
+    }
+
+    // AI 코스 초안 생성
+    @Operation(
+            summary = "AI 코스 초안 생성",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @PostMapping("/tours/{tourId}/course")
+    public ResponseEntity<Map<String, Object>> createDraft(
+            @RequestHeader(value = "Authorization", required = false)
+            String authorization,
+            @PathVariable Long tourId
+    ) {
+        var data = draftService.create(authenticator.requireUniversity(authorization), tourId);
+
+        return response(HttpStatus.CREATED, "S201", "코스 초안 생성 완료", data);
     }
 
     // 코스 수정 (지점 전체 교체)

@@ -60,8 +60,7 @@ public class CourseService {
     @Transactional(readOnly = true)
     public CourseResponse view(User user, Long tourId) {
         Tour tour = tourRepository.findById(tourId)
-                .orElseThrow(() -> new ApiException(
-                        HttpStatus.NOT_FOUND, "E404", "존재하지 않는 탐방입니다"));
+                .orElseThrow(CourseErrors::tourNotFound);
 
         boolean guide = tour.getGuideId().equals(user.getId());
         if (!guide && !applicationRepository.existsByTourIdAndUserIdAndStatusIn(
@@ -102,8 +101,7 @@ public class CourseService {
 
         Course course = courseRepository.findById(tourId).orElse(null);
         if (course != null && course.isConfirmed()) {
-            throw new ApiException(
-                    HttpStatus.CONFLICT, "E409_COURSE_CONFIRMED", "이미 확정된 코스입니다");
+            throw CourseErrors.courseConfirmed();
         }
 
         requireSelectable(tour, spots);
@@ -188,8 +186,7 @@ public class CourseService {
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND, "E404", "아직 만들어진 코스가 없습니다"));
         if (course.isConfirmed()) {
-            throw new ApiException(
-                    HttpStatus.CONFLICT, "E409_COURSE_CONFIRMED", "이미 확정된 코스입니다");
+            throw CourseErrors.courseConfirmed();
         }
 
         // 이미 지난 날짜의 탐방은 쿠폰이 처음부터 만료되므로 확정할 수 없다
@@ -255,17 +252,15 @@ public class CourseService {
     // 탐방 행을 잠그기 전에 가이드인지 확인한다. 권한 없는 요청이 잠금을 잡고 다른 작업을 막지 못하게 한다.
     private void requireGuide(User guide, Long tourId, String message) {
         Long guideId = courseRepository.findGuideIdByTourId(tourId)
-                .orElseThrow(() -> new ApiException(
-                        HttpStatus.NOT_FOUND, "E404", "존재하지 않는 탐방입니다"));
+                .orElseThrow(CourseErrors::tourNotFound);
         if (!guideId.equals(guide.getId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "E403", message);
+            throw CourseErrors.notGuide(message);
         }
     }
 
     private void requireOpenTour(Tour tour) {
         if (!tour.isOpen()) {
-            throw new ApiException(
-                    HttpStatus.CONFLICT, "E409_INVALID_TOUR_STATUS", "종료되었거나 취소된 탐방입니다");
+            throw CourseErrors.tourNotOpen();
         }
     }
 
