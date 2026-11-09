@@ -2,6 +2,7 @@ package com.uniro.backend.domain.course.service;
 
 import com.uniro.backend.common.ai.AiClient;
 import com.uniro.backend.common.ai.AiException;
+import com.uniro.backend.common.ai.PromptText;
 import com.uniro.backend.domain.store.entity.Store;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -95,10 +96,10 @@ class CourseDraftPlanner {
     private String prompt(List<String> wishes, List<Candidate> candidates) {
         String wishLines = wishes.stream()
                 .limit(MAX_WISHES)
-                .map(w -> "- " + plain(w))
+                .map(w -> "- " + PromptText.plain(w))
                 .collect(Collectors.joining("\n"));
         String candidateLines = candidates.stream()
-                .map(c -> "- id=" + c.id() + " | " + plain(c.name()) + " | " + c.category()
+                .map(c -> "- id=" + c.id() + " | " + PromptText.plain(c.name()) + " | " + c.category()
                         + (c.partner() ? " | 제휴" : ""))
                 .collect(Collectors.joining("\n"));
 
@@ -151,17 +152,12 @@ class CourseDraftPlanner {
     }
 
     private String reason(String text) {
-        String trimmed = plain(text);
+        String trimmed = PromptText.plain(text);
 
         if (trimmed.isEmpty()) {
             return DEFAULT_REASON;
         }
 
         return trimmed.length() > REASON_MAX ? trimmed.substring(0, REASON_MAX) : trimmed;
-    }
-
-    // 글이 <희망>·<후보> 구간을 닫는 태그나 줄바꿈으로 프롬프트 구조를 벗어나지 못하게 한다
-    private String plain(String text) {
-        return text.replace('<', ' ').replace('>', ' ').replaceAll("\\s+", " ").trim();
     }
 }

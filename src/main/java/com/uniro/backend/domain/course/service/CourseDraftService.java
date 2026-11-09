@@ -2,6 +2,7 @@ package com.uniro.backend.domain.course.service;
 
 import com.uniro.backend.common.ApiException;
 import com.uniro.backend.common.TourLocker;
+import com.uniro.backend.common.ai.AiClient;
 import com.uniro.backend.common.ai.AiException;
 import com.uniro.backend.domain.course.dto.CourseResponse;
 import com.uniro.backend.domain.course.entity.Course;
@@ -60,6 +61,7 @@ public class CourseDraftService {
     private final StorePartnershipRepository partnershipRepository;
     private final StoreService storeService;
     private final CourseDraftPlanner planner;
+    private final AiClient aiClient;
     private final CourseAssembler assembler;
     private final TourLocker tourLocker;
     private final TransactionTemplate transactionTemplate;
@@ -73,6 +75,12 @@ public class CourseDraftService {
         }
         requireOpen(info);
         requireNotConfirmed(tourId);
+
+        // 키가 없으면 상점·제휴 조회를 하기 전에 바로 실패시킨다
+        if (!aiClient.enabled()) {
+            log.warn("코스 초안 생성 실패: AI 키가 설정되지 않았습니다");
+            throw aiFailed();
+        }
 
         List<String> wishes = applicationRepository
                 .findMotivationsByTourIdAndStatus(tourId, TourApplicationStatus.APPROVED);
@@ -137,9 +145,7 @@ public class CourseDraftService {
             return planner.plan(wishes, candidates);
         } catch (AiException e) {
             log.warn("코스 초안 생성 실패: {}", e.getMessage());
-            throw new ApiException(
-                    HttpStatus.BAD_GATEWAY, "E502_AI_FAILED",
-                    "코스를 만들지 못했어요. 잠시 후 다시 시도해 주세요");
+            throw aiFailed();
         }
     }
 
@@ -183,6 +189,12 @@ public class CourseDraftService {
         int minutes = Math.min(LAST_MINUTE_OF_DAY, start + step * index);
 
         return LocalTime.of(minutes / 60, minutes % 60);
+    }
+
+    private ApiException aiFailed() {
+        return new ApiException(
+                HttpStatus.BAD_GATEWAY, "E502_AI_FAILED",
+                "코스를 만들지 못했어요. 잠시 후 다시 시도해 주세요");
     }
 
     private void requireOpen(TourInfo info) {

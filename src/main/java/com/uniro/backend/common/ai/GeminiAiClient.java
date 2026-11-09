@@ -7,9 +7,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +21,7 @@ import java.util.Map;
 @Component
 public class GeminiAiClient implements AiClient {
 
-    // 서버 오류나 연결 문제일 때 한 번 더 시도한다
+    // 서버 오류나 연결 문제일 때 한 번 더 시도한다 (응답 시간 초과는 다시 보내지 않는다)
     private static final int MAX_ATTEMPTS = 2;
     private static final int MAX_OUTPUT_TOKENS = 2048;
     private static final double TEMPERATURE = 0.4;
@@ -103,8 +105,12 @@ public class GeminiAiClient implements AiClient {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new AiException("AI 호출이 중단되었습니다", e);
+        } catch (HttpConnectTimeoutException e) {
+            throw new RetryableException("AI 서버에 연결하지 못했습니다(연결 시간 초과)");
+        } catch (HttpTimeoutException e) {
+            // 응답이 시간 안에 오지 않았다. 다시 보내면 요청이 그만큼 더 오래 묶이므로 바로 실패시킨다.
+            throw new AiException("AI 응답이 시간 안에 오지 않았습니다", e);
         } catch (Exception e) {
-            // 시간 초과, 연결 실패
             throw new RetryableException("AI 서버에 연결하지 못했습니다: " + e.getClass().getSimpleName());
         }
 

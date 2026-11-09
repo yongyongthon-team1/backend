@@ -1,6 +1,7 @@
 package com.uniro.backend.domain.review.service;
 
 import com.uniro.backend.common.ai.AiClient;
+import com.uniro.backend.common.ai.PromptText;
 import com.uniro.backend.domain.review.entity.StoreReview;
 import com.uniro.backend.domain.review.entity.StoreReviewSummary;
 import com.uniro.backend.domain.review.repository.StoreReviewRepository;
@@ -73,7 +74,7 @@ public class ReviewSummaryService {
     // 작성자 정보는 보내지 않는다(별점과 한줄평만).
     private String generate(List<StoreReview> reviews) {
         String lines = reviews.stream()
-                .map(r -> "- (별점 " + r.getRating() + ") " + plain(r.getContent()))
+                .map(r -> "- (별점 " + r.getRating() + ") " + PromptText.plain(r.getContent()))
                 .collect(Collectors.joining("\n"));
 
         String prompt = """
@@ -95,11 +96,6 @@ public class ReviewSummaryService {
         }
 
         return summary;
-    }
-
-    // 리뷰 글이 <리뷰> 구간을 닫는 태그나 줄바꿈으로 프롬프트 구조를 벗어나지 못하게 한다
-    private String plain(String content) {
-        return content.replace('<', ' ').replace('>', ' ').replaceAll("\\s+", " ").trim();
     }
 
     private void save(Long storeId, StoreReviewSummary existing, String summary, int count) {
