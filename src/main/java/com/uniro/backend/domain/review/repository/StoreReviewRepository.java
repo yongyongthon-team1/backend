@@ -16,6 +16,11 @@ public interface StoreReviewRepository extends JpaRepository<StoreReview, Long> 
     boolean existsByCouponIdOrUserIdAndTourIdAndStoreId(
             Long couponId, Long userId, Long tourId, Long storeId);
 
+    long countByStoreId(Long storeId);
+
+    // 요약에 반영할 최근 리뷰
+    List<StoreReview> findByStoreIdOrderByCreatedAtDescIdDesc(Long storeId, Pageable pageable);
+
     // 주어진 쿠폰 중 이미 리뷰를 쓴 쿠폰 ID
     @Query("select r.couponId from StoreReview r where r.couponId in :couponIds")
     List<Long> findReviewedCouponIds(@Param("couponIds") Collection<Long> couponIds);
