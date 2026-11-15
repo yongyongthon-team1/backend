@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface CourseRepository extends JpaRepository<Course, Long> {
@@ -31,4 +33,9 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     }
 
     boolean existsByTourIdAndStatus(Long tourId, CourseStatus status);
+
+    // 주어진 탐방 중 코스가 확정된 탐방의 ID (내 탐방 목록의 course_confirmed에 쓴다)
+    @Query("select c.tourId from Course c where c.tourId in :tourIds and c.status = "
+            + "com.uniro.backend.domain.course.entity.CourseStatus.CONFIRMED")
+    List<Long> findConfirmedTourIds(@Param("tourIds") Collection<Long> tourIds);
 }
