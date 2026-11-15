@@ -2,6 +2,7 @@ package com.uniro.backend.domain.tour.service;
 
 import com.uniro.backend.common.ApiException;
 import com.uniro.backend.config.JwtProvider;
+import com.uniro.backend.domain.course.repository.CourseRepository;
 import com.uniro.backend.domain.tour.entity.*;
 import com.uniro.backend.domain.tour.repository.*;
 import com.uniro.backend.domain.university.repository.UniversityRepository;
@@ -16,9 +17,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +34,7 @@ public class MyTourService {
     private final TourRepository tourRepository;
     private final TourApplicationRepository applicationRepository;
     private final UniversityRepository universityRepository;
+    private final CourseRepository courseRepository;
 
     public Map<String, Object> getMyTours(
             String authorization,
@@ -108,6 +113,9 @@ public class MyTourService {
                 userId, status, pageable
         );
 
+        Set<Long> confirmed = confirmedCourses(
+                tours.getContent().stream().map(Tour::getId).toList());
+
         List<Map<String, Object>> items = tours.getContent()
                 .stream()
                 .map(tour -> {
@@ -134,8 +142,7 @@ public class MyTourService {
                             )
                     );
 
-                    // 코스 담당 팀원의 API 연동 후 변경
-                    item.put("course_confirmed", null);
+                    item.put("course_confirmed", confirmed.contains(tour.getId()));
 
                     return item;
                 })
@@ -160,6 +167,9 @@ public class MyTourService {
 
         Page<TourApplication> applications =
                 applicationRepository.findByUserId(userId, pageable);
+
+        Set<Long> confirmed = confirmedCourses(applications.getContent().stream()
+                .map(TourApplication::getTourId).toList());
 
         List<Map<String, Object>> items = applications.getContent()
                 .stream()
@@ -195,7 +205,7 @@ public class MyTourService {
                             "application_status",
                             application.getStatus().name()
                     );
-                    item.put("course_confirmed", null);
+                    item.put("course_confirmed", confirmed.contains(tour.getId()));
 
                     return item;
                 })
@@ -208,6 +218,15 @@ public class MyTourService {
                 size,
                 applications.getTotalElements()
         );
+    }
+
+    // 코스가 확정된 탐방인지 목록의 탐방마다 따로 묻지 않고 한 번에 가져온다
+    private Set<Long> confirmedCourses(Collection<Long> tourIds) {
+        if (tourIds.isEmpty()) {
+            return Set.of();
+        }
+
+        return new HashSet<>(courseRepository.findConfirmedTourIds(tourIds));
     }
 
     private Map<String, Object> pageResponse(
